@@ -1,0 +1,99 @@
+<div id="app">
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="ground"></div>
+
+  <!-- HOME -->
+  <section id="scr-home" class="screen">
+    <div class="hud">
+      <button class="pbtn sm ghost" id="btn-parent" aria-label="Для взрослых"><img class="spr" data-spr="i_gear" alt=""></button>
+      <div class="gemcount" aria-label="Алмазы"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div class="home-main">
+      <div class="logo">
+        <div class="logo-top" id="logo-name">СУПЕР-МАКС</div>
+        <div class="logo-sub">ОХОТА ЗА БУКВАМИ</div>
+      </div>
+      <div class="home-row">
+        <button class="hero-big" id="home-hero" aria-label="Герой"><img class="spr float" id="home-hero-img" data-spr="hero" alt=""></button>
+        <div class="home-actions">
+          <button class="pbtn play pulse" id="btn-play"><img class="spr" data-spr="i_play" alt=""><span>ИГРАТЬ</span></button>
+          <div class="tiles">
+            <button class="pbtn tile" data-go="abc" style="--c:var(--sun)"><img class="spr" data-spr="i_book" alt=""><span>Азбука</span></button>
+            <button class="pbtn tile" data-go="write" style="--c:var(--grass)"><img class="spr" data-spr="i_pencil" alt=""><span>Пропись</span></button>
+            <button class="pbtn tile" data-go="tir" style="--c:var(--hero)"><img class="spr" data-spr="i_target" alt=""><span>Тир</span></button>
+            <button class="pbtn tile" data-go="base" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>База</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="peek" id="peek" aria-label="Глюк"><img class="spr glitchy" data-spr="glitch" alt=""></button>
+  </section>
+
+  <!-- GAME -->
+  <section id="scr-game" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" id="btn-exit" aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="boss" id="boss"><img class="spr boss-img glitchy" id="boss-img" data-spr="glitch" alt=""><div class="hp" id="hp"></div></div>
+      <div class="scr-title free-title" id="free-title" hidden></div>
+      <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div id="stage" class="stage"></div>
+  </section>
+
+  <!-- REWARD -->
+  <section id="scr-reward" class="screen" hidden>
+    <div class="rw">
+      <div class="rw-title" id="rw-title">ПОБЕДА!</div>
+      <div class="rw-scene">
+        <img class="spr rw-hero float" data-spr="hero" alt="">
+        <div class="rw-gems"><img class="spr" data-spr="gem" alt=""><b id="rw-n">+0</b></div>
+        <img class="spr rw-glitch" data-spr="glitch" alt="">
+      </div>
+      <div class="rw-letters" id="rw-letters"></div>
+      <div class="rw-actions">
+        <button class="pbtn big pulse" id="rw-build" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>Строить</span></button>
+        <button class="pbtn big" id="rw-again" style="--c:var(--hero)"><img class="spr" data-spr="i_play" alt=""><span>Ещё</span></button>
+        <button class="pbtn big" id="rw-home" aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BASE -->
+  <section id="scr-base" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="base-title"><b id="base-name">Домик</b><div class="bar"><i id="base-bar"></i></div><span class="base-count" id="base-count">0/0</span></div>
+      <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div class="base-stage" id="base-stage"><canvas id="base-cv"></canvas></div>
+    <div class="base-foot">
+      <div class="built" id="built"></div>
+      <button class="pbtn big" id="base-play" style="--c:var(--hero)"><img class="spr" data-spr="i_play" alt=""><span>Играть</span></button>
+    </div>
+  </section>
+
+  <!-- ABC / WRITE -->
+  <section id="scr-abc" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="scr-title" id="abc-title">АЗБУКА</div>
+      <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div class="abc-wrap"><div class="abc-grid" id="abc-grid"></div></div>
+  </section>
+
+  <!-- PARENT -->
+  <section id="scr-parent" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="scr-title">ДЛЯ РОДИТЕЛЕЙ</div>
+      <div style="width:54px"></div>
+    </div>
+    <div class="parent-wrap"><div class="parent panel" id="parent"></div></div>
+  </section>
+</div>
+
+<div id="modal" class="modal" hidden><div class="modal-box panel" id="modal-box"></div></div>
+<canvas id="fx"></canvas>
+<div id="fxl"></div>
