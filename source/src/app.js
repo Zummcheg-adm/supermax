@@ -111,8 +111,17 @@ const STROKES = {
   'Я': [CAT([60, 0], [32, 0], ARC(32, 26, 24, 26, -90, -270), [60, 52]), [[60, 0], [60, 100]], [[36, 52], [8, 100]]],
 };
 
-/* ---------- base blueprints ---------- */
-const BCH = { g: 'grass', d: 'dirt', s: 'stone', c: 'cobble', p: 'planks', l: 'log', b: 'brick', w: 'glass', f: 'leaves', y: 'gold', i: 'gemb', r: 'red', W: 'white', u: 'blue', k: 'dark', D: 'door', a: 'sand', o: 'orange' };
+/* ---------- build mode: blocks & blueprints ---------- */
+const BCH = { g: 'grass', d: 'dirt', s: 'stone', c: 'cobble', p: 'planks', l: 'log', b: 'brick', w: 'glass', f: 'leaves', y: 'gold', i: 'gemb', r: 'red', W: 'white', u: 'blue', k: 'dark', D: 'door', a: 'sand', o: 'orange', Y: 'ylw' };
+const TCH = Object.fromEntries(Object.entries(BCH).map(([k, v]) => [v, k]));
+const BLOCKS = [
+  { t: 'planks', name: 'Доски' }, { t: 'brick', name: 'Кирпичик' }, { t: 'stone', name: 'Камень' }, { t: 'cobble', name: 'Булыжник' },
+  { t: 'glass', name: 'Стекло' }, { t: 'door', name: 'Дверка' }, { t: 'log', name: 'Бревно' }, { t: 'leaves', name: 'Листья' },
+  { t: 'grass', name: 'Трава' }, { t: 'sand', name: 'Песок' }, { t: 'gold', name: 'Золото' }, { t: 'gemb', name: 'Алмазный блок' },
+  { t: 'red', name: 'Красный блок' }, { t: 'blue', name: 'Синий блок' }, { t: 'white', name: 'Белый блок' }, { t: 'dark', name: 'Чёрный блок' },
+];
+const WW = 16, WH = 10;      // the building grid: columns × rows above the ground
+const BONUS = 10;            // diamonds for the first finished blueprint of each kind
 const BP = [
   { name: 'Домик', acc: 'домик', done: 'Ура! Домик построен!', rows: [
     '...b...',
@@ -124,19 +133,16 @@ const BP = [
     '.ccccc.'] },
   { name: 'Башня', acc: 'башню', done: 'Ура! Башня построена!', rows: [
     '..lrr..',
-    '..lrr..',
     '..l....',
     's.s.s.s',
     'sssssss',
     '.swsws.',
     '.sssss.',
     '.swsws.',
-    '.sssss.',
     '.ssDss.',
     '.ssDss.',
     'ccccccc'] },
   { name: 'Замок', acc: 'замок', done: 'Ура! Замок построен!', rows: [
-    '..lrr.......lrr',
     '..lrr.......lrr',
     '..l.........l..',
     's.s.s.....s.s.s',
@@ -150,14 +156,10 @@ const BP = [
   { name: 'Ракета', acc: 'ракету', done: 'Ракета построена! Пуск!', rocket: true, rows: [
     '....r....',
     '...rrr...',
-    '...WWW...',
     '..WWWWW..',
-    '..WwwwW..',
     '..WwiwW..',
-    '..WwwwW..',
     '..WWWWW..',
     '..WrrrW..',
-    '..WWWWW..',
     '..WWWWW..',
     '.rWWWWWr.',
     'rrWkkkWrr',
@@ -165,10 +167,10 @@ const BP = [
 ];
 BP.forEach(b => {
   b.h = b.rows.length; b.w = Math.max(...b.rows.map(r => r.length)); b.cells = [];
-  for (let y = b.h - 1; y >= 0; y--) for (let x = 0; x < b.w; x++) { const ch = b.rows[y][x]; if (ch && ch !== '.') b.cells.push({ x, y, t: BCH[ch] }); }
+  b.ox = Math.floor((WW - b.w) / 2); b.oy = WH - b.h; b.set = new Set();
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const ch = b.rows[y][x]; if (ch && ch !== '.') { b.cells.push({ x, y, t: BCH[ch] }); b.set.add((b.oy + y) * WW + b.ox + x); } }
   b.n = b.cells.length;
 });
-const CYCLE = BP.reduce((a, b) => a + b.n, 0);
 
 /* ---------- heroes (костюмы Супер-Макса) ---------- */
 const HEROES = [
@@ -182,15 +184,19 @@ const HEROES = [
   { id: 'h_pirate', name: 'Пират', price: 185 },
   { id: 'h_wizard', name: 'Волшебник', price: 230 },
 ];
-function bstate(n) { const cyc = Math.floor(n / CYCLE); let r = n - cyc * CYCLE, i = 0; while (i < BP.length - 1 && r >= BP[i].n) { r -= BP[i].n; i++; } return { cyc, i, placed: r }; }
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
   ALPHA.forEach(c => { S.L[c] = Object.assign({ u: 0, sc: 0, n: 0, ok: 0, st: 0, t: 0, intro: 0 }, S.L[c] || {}); });
+  const w = typeof S.world === 'string' ? S.world : '';
+  S.world = w.length === WW * WH ? [...w].map(ch => (ch !== '.' && BCH[ch]) ? ch : '.').join('') : '.'.repeat(WW * WH);
+  if (!(S.bp >= -1 && S.bp < BP.length)) S.bp = -1;
+  if (!Array.isArray(S.bpDone)) S.bpDone = [];
+  if (S.btool !== 'pick' && !BLOCKS.some(b => b.t === S.btool)) S.btool = 'planks';
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
 
@@ -407,14 +413,22 @@ const T = {
   again1: 'Глюк снова прячет буквы! В бой!', again2: 'Миссия начинается! Вперёд!',
   win: 'Победа! Глюк убежал!', gemsLook: 'Смотри, сколько алмазов!',
   newStars: 'Новые звёзды!', threeStars: 'Ты знаешь новую букву на три звезды!',
-  nextNew: 'В следующей миссии — новая буква!', buildNow: 'Пора строить базу! Жми на замок!',
+  nextNew: 'В следующей миссии — новая буква!', buildNow: 'Пора на стройку! Жми на замок!',
   tir: 'Тир! Сбивай только нужные буквы!', tirNext: 'Следующая буква!',
   pickWrite: 'Выбери букву, которую будем писать!', abc: 'Это твоя азбука! Нажми на букву.',
   allHidden: 'Все буквы спрятаны! Нажми «Играть», чтобы их найти.',
   locked: 'Эту букву ещё прячет Глюк! Играй, и ты её найдёшь.',
   playFirst: 'Сначала нажми «Играть»!',
-  base: 'Это твоя база!', baseMore: 'Играй и собирай алмазы, чтобы строить дальше!', building: 'Строим!',
-  rocketGone: 'Ракета улетела в космос!',
+  build: 'Это твоя стройка! Выбери блок внизу и нажми, куда его поставить.',
+  buildCost: 'Каждый блок стоит один алмаз.',
+  buildHi: 'Строим!',
+  buildEmpty: 'Нужны алмазы! Сыграй миссию, и будет из чего строить.',
+  pick: 'Кирка! Нажми на блок, и он превратится обратно в алмаз.',
+  pickShort: 'Кирка!',
+  planPick: 'Что будем строить? Выбери картинку!',
+  planOff: 'Строй что хочешь!',
+  bonus: 'Держи десять алмазов в подарок!',
+  rocketBack: 'Ракета слетала в космос и вернулась!',
   hello0: 'Привет! Злой Глюк спрятал все буквы. Вперёд! Найдём их!',
   heroTap0: 'Привет! Нажми «Играть», и пойдём искать буквы!',
   nameLetter0: 'С неё начинается твоё имя!',
@@ -448,8 +462,8 @@ const P = {
   wordEx: w => `${cap(w.w)}!`,
   picQ: w => `${cap(w.w)}! С какой буквы начинается слово ${w.w}?`,
   picAns: (w, c) => `${cap(w.w)} начинается с буквы ${nm(c)}!`,
-  building: i => `Строим ${BP[i].acc}.`,
-  nowBuild: i => `Теперь строим ${BP[i].acc}!`,
+  plan: i => `Строим ${BP[i].acc}! Ставь блоки на подсказки.`,
+  block: b => `${b.name}!`,
   heroNow: h => `Теперь ты — ${h.name}!`,
 };
 function allPhrases() {
@@ -465,7 +479,8 @@ function allPhrases() {
       for (const w of LET[c].words) { out.add(P.wordEx(w)); if (w.i === 0) { out.add(P.picQ(w)); out.add(P.picAns(w, c)); } }
     }
   }
-  BP.forEach((b, i) => { out.add(P.building(i)); out.add(P.nowBuild(i)); out.add(b.done); });
+  BP.forEach((b, i) => { out.add(P.plan(i)); out.add(b.done); });
+  BLOCKS.forEach(b => out.add(P.block(b)));
   HEROES.forEach(h => out.add(P.heroNow(h)));
   Object.assign(S, keep);
   return [...out];
@@ -562,13 +577,15 @@ const FX = (() => {
 /* ---------- screens & HUD ---------- */
 let CUR = 'home';
 function show(name) { CUR = name; $$('.screen').forEach(s => { s.hidden = s.id !== 'scr-' + name; }); gemsText(); }
-const wallet = () => Math.max(0, (S.gems || 0) - (S.spent || 0));
+const usedBlocks = () => { const w = S.world || ''; let n = 0; for (let i = 0; i < w.length; i++) if (w[i] !== '.') n++; return n; };
+const wallet = () => Math.max(0, (S.gems || 0) - (S.spent || 0) - usedBlocks());
 const nextHero = () => HEROES.find(h => !owns(h.id));
 const canBuyAny = () => { const h = nextHero(); return !!h && HEROES.some(x => !owns(x.id) && x.price <= wallet()); };
 function gemsText() {
   $$('.gemcount b').forEach(b => { b.textContent = wallet(); });
   const t = $('#tile-heroes'); if (t) t.classList.toggle('has-new', canBuyAny());
   const r = $('#rw-heroes'); if (r) r.hidden = !canBuyAny();
+  const bp = $('#build-play'); if (bp) bp.hidden = wallet() > 0;
 }
 function visibleGemCounter() { const scr = $(`#scr-${CUR}`); return scr ? scr.querySelector('.gemcount') : null; }
 function bumpGems() { gemsText(); const c = visibleGemCounter(); if (c) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
@@ -589,7 +606,7 @@ function closeModal() { $('#modal').hidden = true; MODAL_CB = null; }
 /* ---------- runs (missions / free modes) ---------- */
 let RUN = null, TR = null, curFit = null;
 function newRun(kind) { endRun(); const run = RUN = { kind, alive: true, earned: 0, before: {}, tasks: [], i: 0, prompt: null }; ALPHA.forEach(c => { run.before[c] = lv(c); }); return run; }
-function endRun() { if (RUN) RUN.alive = false; RUN = null; Voice.stop(); curFit = null; if (TR) { TR.destroy(); TR = null; } BASE_TOKEN.alive = false; }
+function endRun() { if (RUN) RUN.alive = false; RUN = null; Voice.stop(); curFit = null; if (TR) { TR.destroy(); TR = null; } buildStop(); }
 async function rs(run, text, o) { if (!run.alive) throw STOP; await say(text, o); if (!run.alive) throw STOP; }
 async function rsPick(run, list) { if (!run.alive) throw STOP; await sayPick(list); if (!run.alive) throw STOP; }
 async function rsleep(run, ms) { if (!run.alive) throw STOP; await sleep(ms); if (!run.alive) throw STOP; }
@@ -1199,8 +1216,14 @@ function openCard(c) {
 }
 function speakCard(c) { say([P.nomEx(c), P.introWords(c)]); }
 
-/* ---------- base ---------- */
-let BASE_TOKEN = { alive: false }, BASE_BUSY = false;
+/* ---------- build mode (Стройка): ребёнок строит сам, 1 алмаз = 1 блок ---------- */
+const HERO_W = 2.2;          // cells reserved left of the grid for the hero
+const BV = { g: null, raf: 0, anims: [], press: null, hop: 0, lift: 0, busy: false, done: false, token: { alive: false }, pickTold: false, emptyAt: 0, badAt: 0, saveT: 0 };
+const cellCh = i => (S.world || '')[i] || '.';
+function setCell(i, ch) { const w = S.world; S.world = w.slice(0, i) + ch + w.slice(i + 1); }
+function bSave() { clearTimeout(BV.saveT); BV.saveT = setTimeout(save, 250); }
+const curBP = () => (S.bp >= 0 && BP[S.bp]) ? BP[S.bp] : null;
+function bpProgress(b = curBP()) { if (!b) return [0, 0]; let d = 0; b.set.forEach(i => { if (cellCh(i) !== '.') d++; }); return [d, b.n]; }
 function drawBlock(g, t, x, y, s, ghost) {
   g.drawImage(TEX[t].cv, x, y, s, s);
   if (ghost) return;
@@ -1208,96 +1231,222 @@ function drawBlock(g, t, x, y, s, ghost) {
   g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x, y + s - e, s, e); g.fillRect(x + s - e, y, e, s);
   g.strokeStyle = 'rgba(27,21,48,.55)'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, s - 1, s - 1);
 }
-function sceneGeom(bi) {
-  const cv = $('#base-cv'), W = cv.clientWidth, H = cv.clientHeight, b = BP[bi];
-  const bs = Math.max(6, Math.floor(Math.min(W * .96 / (b.w + 7), H * .97 / (b.h + 3.4), 58)));
-  const islandW = b.w + 6, ix = Math.round((W - islandW * bs) / 2), groundY = Math.round(H - 3 * bs);
-  return { W, H, b, bs, ix, islandW, groundY, bx: ix + 4 * bs, by: groundY - b.h * bs };
-}
-function drawScene(bi, placed, opt = {}) {
-  const cv = $('#base-cv'); const G = sceneGeom(bi); const { W, H, b, bs } = G;
-  if (!W || !H) return G;
+function bLayout() {
+  const cv = $('#build-cv'); if (!cv) return null;
+  const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return (BV.g = null);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, W, H);
-  for (let x = 0; x < G.islandW; x++) drawBlock(g, 'grass', G.ix + x * bs, G.groundY, bs);
-  for (let x = 1; x < G.islandW - 1; x++) drawBlock(g, 'dirt', G.ix + x * bs, G.groundY + bs, bs);
-  for (let x = 3; x < G.islandW - 3; x++) drawBlock(g, 'stone', G.ix + x * bs, G.groundY + 2 * bs, bs);
-  const hh = Math.round(bs * 3.1), hw = Math.round(hh * 16 / 24);
-  g.drawImage(SPRC[heroKey()], G.ix + Math.round(2.1 * bs - hw / 2), G.groundY - hh, hw, hh);
-  const lift = opt.lift || 0;
-  b.cells.forEach((cell, k) => {
-    const x = G.bx + cell.x * bs, y = G.by + cell.y * bs;
-    if (k < placed) drawBlock(g, cell.t, x, y - lift, bs);
-    else if (opt.drop !== undefined && k === placed) { const p = opt.drop; g.globalAlpha = Math.min(1, p * 4); drawBlock(g, cell.t, x, y - (1 - easeOut(p)) * H * .6, bs); g.globalAlpha = 1; }
-    else if (!lift) { g.globalAlpha = .17; drawBlock(g, cell.t, x, y, bs, true); g.globalAlpha = 1; g.setLineDash([3, 4]); g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.5; g.strokeRect(x + 2, y + 2, bs - 4, bs - 4); g.setLineDash([]); }
+  const cs = Math.max(8, Math.floor(Math.min(W / (WW + HERO_W + .3), H / (WH + 1.75), 76)));
+  const ox = Math.round((W - (WW + HERO_W) * cs) / 2 + HERO_W * cs), gy = Math.round(H - 1.75 * cs);
+  return (BV.g = { W, H, dpr, cs, ox, gy, oy: gy - WH * cs });
+}
+function bReq() { if (!BV.raf) BV.raf = requestAnimationFrame(bDraw); }
+function bDraw() {
+  BV.raf = 0;
+  if (CUR !== 'build') return;
+  const G = BV.g || bLayout(); if (!G) return;
+  const g = $('#build-cv').getContext('2d'), { cs, ox, oy, gy } = G, now = performance.now();
+  g.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, G.W, G.H);
+  // building area + dots on the cell corners
+  g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(ox, oy, WW * cs, WH * cs);
+  const d = Math.max(2, Math.round(cs * .07)); g.fillStyle = 'rgba(255,255,255,.6)';
+  for (let y = 0; y <= WH; y++) for (let x = 0; x <= WW; x++) g.fillRect(ox + x * cs - d / 2, oy + y * cs - d / 2, d, d);
+  // ground across the whole width
+  for (let k = Math.floor(-ox / cs) - 1; ox + k * cs < G.W; k++) { drawBlock(g, 'grass', ox + k * cs, gy, cs); drawBlock(g, 'dirt', ox + k * cs, gy + cs, cs); }
+  // blueprint hints on empty cells
+  const b = curBP();
+  if (b && !BV.lift) {
+    g.setLineDash([Math.max(3, cs * .12), Math.max(3, cs * .1)]); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.5;
+    for (const c of b.cells) {
+      const x = b.ox + c.x, y = b.oy + c.y; if (cellCh(y * WW + x) !== '.') continue;
+      const px = ox + x * cs, py = oy + y * cs, m = Math.round(cs * .2);
+      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(px + 2, py + 2, cs - 4, cs - 4);
+      g.globalAlpha = .85; drawBlock(g, c.t, px + m, py + m, cs - 2 * m, true); g.globalAlpha = 1; g.strokeRect(px + 2.5, py + 2.5, cs - 5, cs - 5);
+    }
+    g.setLineDash([]);
+  }
+  // hero (hops when a block lands)
+  const hp = clamp((now - BV.hop) / 320, 0, 1), hop = hp < 1 ? Math.sin(hp * Math.PI) * cs * .45 : 0;
+  const hh = cs * 2.5, hw = hh * 16 / 24;
+  g.drawImage(SPRC[heroKey()], Math.round(ox - HERO_W * cs + (HERO_W * cs - hw) / 2), Math.round(gy - hh - hop), Math.round(hw), Math.round(hh));
+  let busy = hp < 1;
+  // blocks
+  BV.anims = BV.anims.filter(a => now - a.t0 < a.dur);
+  const am = new Map(BV.anims.map(a => [a.i, a])), w = S.world;
+  for (let i = 0; i < w.length; i++) {
+    const ch = w[i]; if (ch === '.') continue;
+    let px = ox + (i % WW) * cs, py = oy + Math.floor(i / WW) * cs, s = cs;
+    if (BV.lift && b && b.set.has(i)) py -= BV.lift;
+    const a = am.get(i);
+    if (a) { const p = easeOut(clamp((now - a.t0) / a.dur, 0, 1)); s = cs * (1 + a.k * (1 - p)); px -= (s - cs) / 2; py -= (s - cs) / 2 + a.k * (1 - p) * cs; busy = true; }
+    drawBlock(g, BCH[ch], px, py, s);
+  }
+  // finger position
+  const P = BV.press;
+  if (P && P.cur) { g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.strokeRect(ox + P.cur.x * cs + 1.5, oy + P.cur.y * cs + 1.5, cs - 3, cs - 3); }
+  // very first time: blink where to tap
+  if (!BV.lift && !usedBlocks() && wallet() > 0 && !b) {
+    const p = (Math.sin(now / 170) + 1) / 2, hx = ox + (WW >> 1) * cs, hy = oy + (WH - 1) * cs;
+    if (S.btool !== 'pick') { g.globalAlpha = .25 + .4 * p; drawBlock(g, S.btool, hx, hy, cs, true); g.globalAlpha = 1; }
+    g.strokeStyle = `rgba(255,198,46,${.5 + .5 * p})`; g.lineWidth = 3 + 3 * p; g.strokeRect(hx + 3, hy + 3, cs - 6, cs - 6); busy = true;
+  }
+  if (busy) bReq();
+}
+function bCell(e) {
+  const G = BV.g; if (!G) return null;
+  const r = $('#build-cv').getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left - G.ox) / G.cs), y = Math.floor((e.clientY - r.top - G.oy) / G.cs);
+  return (x < 0 || y < 0 || x >= WW || y >= WH) ? null : { x, y, i: y * WW + x };
+}
+function cellPt(i) { const G = BV.g, r = $('#build-cv').getBoundingClientRect(); return [r.left + G.ox + (i % WW + .5) * G.cs, r.top + G.oy + (Math.floor(i / WW) + .5) * G.cs]; }
+function bNoGems() {
+  const now = Date.now();
+  if (now - BV.badAt > 700) { BV.badAt = now; Sfx.bad(); const c = visibleGemCounter(); if (c) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); } }
+  if (now - BV.emptyAt > 6000) { BV.emptyAt = now; say(T.buildEmpty); }
+  gemsText();
+}
+function bPlace(i, t) {
+  const cur = cellCh(i), ch = TCH[t];
+  if (cur === ch) return false;
+  if (cur === '.' && wallet() <= 0) { bNoGems(); return false; }
+  setCell(i, ch); bSave();
+  BV.anims.push({ i, t0: performance.now(), dur: 180, k: .3 }); BV.hop = performance.now();
+  Sfx.place();
+  const [x, y] = cellPt(i); FX.spawn(x, y + BV.g.cs * .45, TEX[t].cols, 6, { speed: .3, size: .55 });
+  if (cur === '.') bumpGems();
+  bCheck(true); bReq(); return true;
+}
+function bRemove(i) {
+  const cur = cellCh(i); if (cur === '.') return false;
+  setCell(i, '.'); bSave(); Sfx.crack();
+  const [x, y] = cellPt(i); FX.spawn(x, y, TEX[BCH[cur]].cols.concat(['#ffffff']), 14, { speed: .55 });
+  FX.flyGem([x, y], 1);
+  bCheck(false); bReq(); return true;
+}
+function bApply(i, mode) {
+  const cur = cellCh(i), t = S.btool;
+  if (mode === 'remove') return bRemove(i);
+  if (cur === '.') return bPlace(i, t);
+  if (mode === 'paint' && BCH[cur] !== t) return bPlace(i, t);
+  return false;
+}
+function bDown(e) {
+  if (BV.busy || CUR !== 'build' || (e.button !== undefined && e.button > 0)) return;
+  if (!BV.g) bLayout();
+  const c = bCell(e); if (!c) return;
+  e.preventDefault();
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
+  const cur = cellCh(c.i), tool = S.btool;
+  const mode = tool === 'pick' ? 'remove' : (cur === '.' || BCH[cur] === tool) ? 'place' : 'paint';
+  BV.press = { id: e.pointerId, mode, last: c, cur: c };
+  if (!bApply(c.i, mode) && mode !== 'remove' && cur !== '.') { BV.anims.push({ i: c.i, t0: performance.now(), dur: 160, k: .12 }); Sfx.tap(); }
+  bReq();
+}
+function bMove(e) {
+  const P = BV.press; if (!P || P.id !== e.pointerId || BV.busy) return;
+  const c = bCell(e); if (!c) { if (P.cur) { P.cur = null; bReq(); } return; }
+  if (P.cur && c.i === P.cur.i) return;
+  // walk every cell between the last one and this one, so a fast finger leaves no gaps
+  let x = P.last.x, y = P.last.y; const dx = Math.abs(c.x - x), dy = Math.abs(c.y - y), sx = c.x > x ? 1 : -1, sy = c.y > y ? 1 : -1; let err = dx - dy;
+  while (x !== c.x || y !== c.y) { const e2 = 2 * err; if (e2 > -dy) { err -= dy; x += sx; } if (e2 < dx) { err += dx; y += sy; } bApply(y * WW + x, P.mode); }
+  P.last = c; P.cur = c; bReq();
+}
+function bUp(e) { const P = BV.press; if (!P || P.id !== e.pointerId) return; BV.press = null; clearTimeout(BV.saveT); save(); bReq(); }
+function bHeader() {
+  const b = curBP(), nm2 = $('#build-name'), bw = $('#build-barw'), cnt = $('#build-count');
+  if (!b) { nm2.textContent = 'СТРОЙКА'; bw.hidden = cnt.hidden = true; return; }
+  const [d, n] = bpProgress(b);
+  nm2.textContent = b.name.toUpperCase(); bw.hidden = cnt.hidden = false;
+  $('#build-bar').style.width = (d / n * 100).toFixed(1) + '%'; cnt.textContent = `${d}/${n}`;
+}
+function bCheck(added) {
+  bHeader();
+  const b = curBP(); if (!b) return;
+  const [d, n] = bpProgress(b);
+  if (d < n) { BV.done = false; return; }
+  if (BV.done || !added) return;
+  BV.done = true; bCelebrate(S.bp);
+}
+async function bCelebrate(i) {
+  const token = BV.token, b = BP[i], G = BV.g, r = $('#build-cv').getBoundingClientRect();
+  const first = !(S.bpDone || []).includes(i);
+  const cx = r.left + G.ox + (b.ox + b.w / 2) * G.cs, cy = r.top + G.oy + (b.oy + b.h / 2) * G.cs;
+  if (first) { S.bpDone = [...(S.bpDone || []), i]; S.gems += BONUS; save(); }
+  Sfx.fanfare(); FX.confetti(); FX.burst(cx, Math.max(r.top + 70, r.top + G.oy + b.oy * G.cs), 'ПОСТРОЕНО!', { fs: 46 });
+  await say(b.done); if (!token.alive) return;
+  if (b.rocket) { await rocketFly(b, token); if (!token.alive) return; }
+  if (first) { FX.flyGem([cx, cy], 5); await say(T.bonus); }
+}
+function bAnim(dur, fn, token) {
+  return new Promise(res => { const t0 = performance.now(); const f = ts => { if (!token.alive) { res(); return; } const p = clamp((ts - t0) / dur, 0, 1); fn(p); bDraw(); if (p < 1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+}
+async function rocketFly(b, token) {
+  BV.busy = true; BV.press = null;
+  try {
+    const far = () => BV.g.H + 60;
+    const flame = () => { const G = BV.g, r = $('#build-cv').getBoundingClientRect(); FX.spawn(r.left + G.ox + (b.ox + b.w / 2) * G.cs, r.top + G.oy + (b.oy + b.h) * G.cs - BV.lift, ['#ff8a1f', '#ffc62e', '#e8363f', '#ffffff'], 5, { speed: .45, gr: -200, life: .8 }); };
+    Sfx.whoosh();
+    await bAnim(1900, p => { BV.lift = Math.pow(p, 2.1) * far(); flame(); }, token); if (!token.alive) return;
+    await sleep(600); if (!token.alive) return;
+    Sfx.whoosh();
+    await bAnim(1800, p => { BV.lift = (1 - easeOut(p)) * far(); if (p < .97) flame(); }, token); if (!token.alive) return;
+    BV.lift = 0; bDraw(); Sfx.boom();
+    const G = BV.g, r = $('#build-cv').getBoundingClientRect();
+    FX.spawn(r.left + G.ox + (b.ox + b.w / 2) * G.cs, r.top + G.gy, ['#d6cbbd', '#ffffff', '#a3a3ad'], 26, { speed: .7 });
+    await say(T.rocketBack);
+  } finally { BV.lift = 0; BV.busy = false; bReq(); }
+}
+function bHotbar() {
+  const hb = $('#hotbar');
+  if (!hb.childElementCount) {
+    hb.innerHTML = `<button class="hb pick" data-t="pick" aria-label="Кирка">${sprImg('i_pick')}</button>` +
+      BLOCKS.map(b => `<button class="hb" data-t="${b.t}" aria-label="${b.name}" style="background-image:url(${TEX[b.t].url})"></button>`).join('');
+  }
+  $$('.hb', hb).forEach(b => b.classList.toggle('sel', b.dataset.t === S.btool));
+}
+function bTool(t) {
+  if (BV.busy) return;
+  S.btool = t; save(); bHotbar(); Sfx.tap();
+  if (t === 'pick') { say(BV.pickTold ? T.pickShort : T.pick); BV.pickTold = true; return; }
+  const b = BLOCKS.find(x => x.t === t); if (b) say(P.block(b));
+}
+const THUMB = {};
+function bpThumb(rows, key) {
+  if (THUMB[key]) return THUMB[key];
+  const h = rows.length, w = Math.max(...rows.map(r => r.length)), s = 8, c = document.createElement('canvas');
+  c.width = w * s; c.height = h * s; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const ch = r[x]; if (ch !== '.' && BCH[ch]) drawBlock(g, BCH[ch], x * s, y * s, s); } });
+  return (THUMB[key] = c.toDataURL());
+}
+const FREE_ROWS = ['.fff.', 'fffff', 'fffff', '.fff.', '..l..', '..l..'];
+function openPlans() {
+  if (BV.busy) return;
+  const cards = [{ i: -1, name: 'Сам', rows: FREE_ROWS }].concat(BP.map((b, i) => ({ i, name: b.name, rows: b.rows })));
+  modal(`<h3>Что строим?</h3><div class="plans">${cards.map(c => `<button class="plan-card${S.bp === c.i ? ' sel' : ''}" data-act="plan" data-i="${c.i}" aria-label="${c.name}">${(S.bpDone || []).includes(c.i) ? sprImg('star', 'pc-done') : ''}<span class="th"><img src="${bpThumb(c.rows, 'k' + c.i)}" alt=""></span><span class="pc-name">${c.name}</span></button>`).join('')}</div>`, el => {
+    if (el.dataset.act !== 'plan') return;
+    closeModal(); bSetPlan(+el.dataset.i);
   });
-  return G;
+  say(T.planPick);
 }
-function baseHeader(bi, placed) { const b = BP[bi]; $('#base-name').textContent = b.name; $('#base-count').textContent = `${placed}/${b.n}`; $('#base-bar').style.width = (placed / b.n * 100).toFixed(1) + '%'; }
-function renderBuilt() {
-  const st = bstate(S.placed), box = $('#built'); box.innerHTML = '';
-  BP.forEach((b, i) => {
-    const cnt = st.cyc + (i < st.i ? 1 : 0); if (!cnt) return;
-    const s = Math.max(2, Math.floor(34 / b.h)), c = document.createElement('canvas'); c.width = b.w * s; c.height = b.h * s;
-    const g = c.getContext('2d'); g.imageSmoothingEnabled = false; b.cells.forEach(cell => g.drawImage(TEX[cell.t].cv, cell.x * s, cell.y * s, s, s));
-    const d = document.createElement('div'); d.className = 'bt'; d.title = b.name; d.append(c); if (cnt > 1) d.insertAdjacentHTML('beforeend', `<span>×${cnt}</span>`); box.append(d);
-  });
-  if (!box.children.length) box.innerHTML = '<div class="base-hint">Алмазы из миссий превращаются в блоки базы</div>';
+function bSetPlan(i) {
+  S.bp = i; save();
+  const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
+  bHeader(); bReq();
+  say(i < 0 ? T.planOff : P.plan(i));
 }
-function animateDrop(bi, placed, dur, token) {
-  return new Promise(res => { const t0 = performance.now(); const f = ts => { if (!token.alive) { res(); return; } const p = Math.min(1, (ts - t0) / dur); drawScene(bi, placed, { drop: p }); if (p < 1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
-}
-function launchRocket(bi, token) {
-  Sfx.whoosh();
-  return new Promise(res => {
-    const t0 = performance.now(), r = $('#base-cv').getBoundingClientRect();
-    const f = ts => {
-      if (!token.alive) { res(); return; }
-      const p = Math.min(1, (ts - t0) / 1900), G0 = sceneGeom(bi), lift = Math.pow(p, 2.1) * (G0.H + 300);
-      const G = drawScene(bi, BP[bi].n, { lift });
-      FX.spawn(r.left + G.bx + G.b.w * G.bs / 2, r.top + G.by + G.b.h * G.bs - lift, ['#ff8a1f', '#ffc62e', '#e8363f', '#ffffff'], 5, { speed: .45, gr: -200, life: .8 });
-      if (p < 1) requestAnimationFrame(f); else res();
-    };
-    requestAnimationFrame(f);
-  });
-}
-async function openBase() {
+async function openBuild() {
   endRun(); closeModal();
-  const token = BASE_TOKEN = { alive: true };
-  show('base'); await nextFrame();
-  let st = bstate(S.placed);
-  renderBuilt(); drawScene(st.i, st.placed); baseHeader(st.i, st.placed);
-  const pending = S.gems - S.placed;
-  if (pending <= 0) {
-    say([T.base, P.building(st.i), T.baseMore]);
-    return;
-  }
-  say(T.building);
-  await sleep(700);
-  BASE_BUSY = true;
-  try { await buildLoop(token); } finally { BASE_BUSY = false; }
+  BV.token = { alive: true }; BV.press = null; BV.busy = false; BV.lift = 0; BV.anims = [];
+  show('build'); bHotbar(); bHeader();
+  await nextFrame();
+  bLayout();
+  const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
+  bReq();
+  if (!S.buildSeen) { S.buildSeen = 1; save(); say(wallet() > 0 ? [T.build, T.buildCost] : [T.build, T.buildEmpty]); }
+  else if (wallet() <= 0 && !usedBlocks()) say(T.buildEmpty);
+  else say(T.buildHi);
 }
-async function buildLoop(token) {
-  let st;
-  while (S.placed < S.gems && token.alive) {
-    st = bstate(S.placed);
-    const dur = (S.gems - S.placed) > 25 ? 110 : 230;
-    await animateDrop(st.i, st.placed, dur, token); if (!token.alive) return;
-    S.placed++; save(); Sfx.place();
-    const G = drawScene(st.i, st.placed + 1); baseHeader(st.i, st.placed + 1);
-    const cell = BP[st.i].cells[st.placed], r = $('#base-cv').getBoundingClientRect();
-    if (cell && G) FX.spawn(r.left + G.bx + (cell.x + .5) * G.bs, r.top + G.by + (cell.y + 1) * G.bs, ['#d6cbbd', '#ffffff', '#a3a3ad'], 6, { speed: .35, size: .6 });
-    if (st.placed + 1 >= BP[st.i].n) {
-      Sfx.fanfare(); FX.confetti(); FX.burst(r.left + r.width / 2, r.top + r.height * .3, 'ПОСТРОЕНО!', { fs: 46 });
-      await say(BP[st.i].done); if (!token.alive) return;
-      if (BP[st.i].rocket) { await launchRocket(st.i, token); if (!token.alive) return; await say(T.rocketGone); if (!token.alive) return; }
-      await sleep(400); if (!token.alive) return;
-      renderBuilt(); const ns = bstate(S.placed); drawScene(ns.i, ns.placed); baseHeader(ns.i, ns.placed);
-      await say(P.nowBuild(ns.i)); if (!token.alive) return;
-    } else await sleep(dur > 150 ? 60 : 15);
-  }
-}
+function buildStop() { BV.token.alive = false; BV.press = null; BV.lift = 0; BV.busy = false; }
 
 /* ---------- heroes screen ---------- */
 function openHeroes() {
@@ -1402,7 +1551,8 @@ function renderParent() {
   </section>
   <section>
     <h3>Как это работает</h3>
-    <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы, из них строится база.</p>
+    <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы.</p>
+    <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Есть чертежи (домик, башня, замок, ракета) — за первую постройку по чертежу +10 алмазов. Алмазы также открывают новых героев.</p>
     <p>Ошибки не наказываются: игра называет букву, на которую нажал ребёнок, а после второй ошибки подсвечивает нужную.</p>
     <p>Лучше одна-две миссии в день, чем час подряд. Прогресс хранится в этом браузере на этом устройстве.</p>
   </section>`;
@@ -1451,7 +1601,7 @@ function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) Voice.stop(); });
   window.addEventListener('resize', () => {
     FX.resize(); fitLogo(); if (curFit) curFit(); if (TR) TR.layout();
-    if (CUR === 'base' && !BASE_BUSY) { const st = bstate(S.placed); drawScene(st.i, st.placed); }
+    if (CUR === 'build') { bLayout(); bReq(); }
   });
 
   $('#btn-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
@@ -1462,7 +1612,7 @@ function boot() {
   $('#peek').addEventListener('click', () => { Sfx.bad(); say(T.villain, { pitch: .55, rate: 1.05 }); });
   $$('[data-go]').forEach(b => b.addEventListener('click', () => {
     Sfx.tap(); const g = b.dataset.go;
-    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'base') openBase(); else if (g === 'heroes') openHeroes();
+    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'build') openBuild(); else if (g === 'heroes') openHeroes();
   }));
   $('#btn-parent').addEventListener('click', () => { Sfx.tap(); openGate(); });
   $$('[data-home]').forEach(b => b.addEventListener('click', () => { Sfx.tap(); goHome(); }));
@@ -1480,12 +1630,18 @@ function boot() {
     if (!S.L[c].u) { Sfx.bad(); say(T.locked); return; }
     Sfx.tap(); if (ABC_MODE === 'write') startTrace(c); else openCard(c);
   });
-  $('#rw-build').addEventListener('click', () => { Sfx.tap(); openBase(); });
+  $('#rw-build').addEventListener('click', () => { Sfx.tap(); openBuild(); });
   $('#rw-again').addEventListener('click', () => { Sfx.tap(); startMission(); });
   $('#rw-home').addEventListener('click', () => { Sfx.tap(); goHome(); });
   $('#rw-heroes').addEventListener('click', () => { Sfx.tap(); openHeroes(); });
   $('#hero-grid').addEventListener('click', e => { const c = e.target.closest('.hcard'); if (c) tapHero(c.dataset.h, c); });
-  $('#base-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
+  $('#build-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
+  $('#btn-plan').addEventListener('click', () => { Sfx.tap(); openPlans(); });
+  $('#hotbar').addEventListener('click', e => { const b = e.target.closest('.hb'); if (b) bTool(b.dataset.t); });
+  const bcv = $('#build-cv');
+  bcv.addEventListener('pointerdown', bDown); bcv.addEventListener('pointermove', bMove);
+  bcv.addEventListener('pointerup', bUp); bcv.addEventListener('pointercancel', bUp); bcv.addEventListener('lostpointercapture', bUp);
+  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'build') { bLayout(); bReq(); } }).observe($('#build-stage'));
   onVoices = () => { if (CUR === 'parent' && S.sysVoice && !$('#p-voice') && TTS.ruVoices().length) renderParent(); };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLogo).catch(() => {});
   if (PWA && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -1494,7 +1650,7 @@ function boot() {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* ignore */ }
   }
-  window.__game = { S: () => S, LET, STROKES, BP, HEROES, lv, unlocked, allPhrases, wallet, get RUN() { return RUN; }, get TR() { return TR; }, save };
+  window.__game = { S: () => S, LET, STROKES, BP, HEROES, BLOCKS, WW, WH, BV, lv, unlocked, allPhrases, wallet, usedBlocks, bpProgress, get RUN() { return RUN; }, get TR() { return TR; }, save };
 }
 const startApp = () => { try { boot(); } catch (e) { console.error(e); } };
 if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(startApp); else startApp();

@@ -71,13 +71,11 @@ with sync_playwright() as pw:
     page.wait_for_timeout(900)
     page.screenshot(path=f'{OUT}/{TAG}_reward.png')
     st = page.evaluate("() => { const S = window.__game.S(); return { gems: S.gems, placed: S.placed, missions: S.missions, L: Object.fromEntries(Object.entries(S.L).filter(([k,v]) => v.u).map(([k,v]) => [k, [v.sc, v.n, v.ok, v.intro]])) }; }")
-    # base
+    # build
     page.click('#rw-build', force=True)
-    page.wait_for_timeout(600)
-    page.screenshot(path=f'{OUT}/{TAG}_base_mid.png')
-    page.wait_for_function("() => window.__game.S().placed >= window.__game.S().gems", timeout=60000)
-    page.wait_for_timeout(500)
-    page.screenshot(path=f'{OUT}/{TAG}_base.png')
+    page.wait_for_timeout(900)
+    page.screenshot(path=f'{OUT}/{TAG}_build.png')
+    assert page.evaluate("() => !document.querySelector('#scr-build').hidden"), 'build screen not shown'
     said = page.evaluate('() => window.__said')
     print('LOG', log)
     print('STATE', json.dumps(st, ensure_ascii=False))

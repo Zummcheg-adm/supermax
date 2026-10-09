@@ -574,6 +574,36 @@ SPR['i_crown'] = [
     "............",
 ]
 
+SPR['i_pick'] = [
+    "............",
+    "..KKKKKKKK..",
+    ".KAWWAAAAAK.",
+    "KAAKKBBKKAAK",
+    "KAK.KBBK.KAK",
+    "KK..KBBK..KK",
+    "....KBBK....",
+    "....KBBK....",
+    "....KBBK....",
+    "....KBBK....",
+    "....KBBK....",
+    "....KKKK....",
+]
+
+SPR['i_plan'] = [
+    "............",
+    ".KKKKKKKKKK.",
+    ".KUUUUUUUUK.",
+    ".KUUUUWUUUK.",
+    ".KUUUWUWUUK.",
+    ".KUUWUUUWUK.",
+    ".KUUWUUUWUK.",
+    ".KUUWUWUWUK.",
+    ".KUUWUWUWUK.",
+    ".KUUWWWWWUK.",
+    ".KKKKKKKKKK.",
+    "............",
+]
+
 
 def render(name, scale=12):
     from PIL import Image

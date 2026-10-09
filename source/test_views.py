@@ -67,11 +67,10 @@ with sync_playwright() as pw:
             run.earned = 11; run.before['М'] = 1; finishMission(run).catch(()=>{}); }""")
         page.wait_for_timeout(1300)
         page.screenshot(path=f'{OUT}/{TAG}_v_reward.png')
-    if want('base'):
-        page.evaluate("() => { goHome(); window.__game.S().gems = 75; openBase(); }")
-        page.wait_for_function("() => window.__game.S().placed >= 75", timeout=60000)
+    if want('build'):
+        page.evaluate("() => { goHome(); const S = window.__game.S(); S.gems = 75; S.bp = 0; openBuild(); }")
         page.wait_for_timeout(1500)
-        page.screenshot(path=f'{OUT}/{TAG}_v_base.png')
+        page.screenshot(path=f'{OUT}/{TAG}_v_build.png')
     if want('abc'):
         page.evaluate("() => openABC('abc')")
         page.wait_for_timeout(500)

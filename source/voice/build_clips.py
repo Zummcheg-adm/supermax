@@ -19,12 +19,21 @@ def read_pcm(path):
     return sr, a
 
 
+from vowels import vowel_wav, PURE, IOT
+
+
 def seg(text, speed):
     key = (text, speed)
     if key not in _seg:
-        tp = f'/home/claude/tts/wav2/seg_{hashlib.md5((text + str(speed)).encode()).hexdigest()[:12]}.wav'
-        if not os.path.exists(tp):
-            synth(text, tp, 'irina', speed=speed, noise=0.75)
+        core = text.strip('!.?, ').lower()
+        if len(core) == 1 and core in (PURE | IOT):
+            tp = f'/home/claude/tts/vow/v_{ord(core)}.wav'   # firm single-sound vowel
+            if not os.path.exists(tp):
+                vowel_wav(core, tp)
+        else:
+            tp = f'/home/claude/tts/wav2/seg_{hashlib.md5((text + str(speed)).encode()).hexdigest()[:12]}.wav'
+            if not os.path.exists(tp):
+                synth(text, tp, 'irina', speed=speed, noise=0.75)
         _seg[key] = read_pcm(tp)
     return _seg[key]
 

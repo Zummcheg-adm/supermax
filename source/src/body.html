@@ -22,7 +22,7 @@
             <button class="pbtn tile" data-go="abc" style="--c:var(--sun)"><img class="spr" data-spr="i_book" alt=""><span>Азбука</span></button>
             <button class="pbtn tile" data-go="write" style="--c:var(--grass)"><img class="spr" data-spr="i_pencil" alt=""><span>Пропись</span></button>
             <button class="pbtn tile" data-go="tir" style="--c:var(--hero)"><img class="spr" data-spr="i_target" alt=""><span>Тир</span></button>
-            <button class="pbtn tile" data-go="base" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>База</span></button>
+            <button class="pbtn tile" data-go="build" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>Стройка</span></button>
             <button class="pbtn tile" id="tile-heroes" data-go="heroes" style="--c:var(--cape)"><img class="spr" data-spr="i_crown" alt=""><span>Герои</span><i class="badge">!</i></button>
           </div>
         </div>
@@ -61,18 +61,17 @@
     </div>
   </section>
 
-  <!-- BASE -->
-  <section id="scr-base" class="screen" hidden>
+  <!-- BUILD -->
+  <section id="scr-build" class="screen" hidden>
     <div class="hud">
       <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
-      <div class="base-title"><b id="base-name">Домик</b><div class="bar"><i id="base-bar"></i></div><span class="base-count" id="base-count">0/0</span></div>
+      <div class="build-title"><span class="scr-title" id="build-name">СТРОЙКА</span><div class="bar" id="build-barw" hidden><i id="build-bar"></i></div><span class="build-count" id="build-count" hidden>0/0</span></div>
+      <button class="pbtn sm" id="btn-plan" aria-label="Что строим" style="--c:var(--sun)"><img class="spr" data-spr="i_plan" alt=""></button>
+      <button class="pbtn sm pulse" id="build-play" aria-label="Играть" style="--c:var(--hero)" hidden><img class="spr" data-spr="i_play" alt=""></button>
       <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
     </div>
-    <div class="base-stage" id="base-stage"><canvas id="base-cv"></canvas></div>
-    <div class="base-foot">
-      <div class="built" id="built"></div>
-      <button class="pbtn big" id="base-play" style="--c:var(--hero)"><img class="spr" data-spr="i_play" alt=""><span>Играть</span></button>
-    </div>
+    <div class="build-stage" id="build-stage"><canvas id="build-cv"></canvas></div>
+    <div class="hotbar" id="hotbar"></div>
   </section>
 
   <!-- ABC / WRITE -->
