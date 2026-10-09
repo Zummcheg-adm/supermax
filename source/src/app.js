@@ -169,11 +169,24 @@ BP.forEach(b => {
   b.n = b.cells.length;
 });
 const CYCLE = BP.reduce((a, b) => a + b.n, 0);
+
+/* ---------- heroes (костюмы Супер-Макса) ---------- */
+const HEROES = [
+  { id: 'hero', name: 'Супер-Макс', price: 0 },
+  { id: 'h_cosmo', name: 'Космонавт', price: 20 },
+  { id: 'h_ninja', name: 'Ниндзя', price: 35 },
+  { id: 'h_robot', name: 'Робот', price: 55 },
+  { id: 'h_builder', name: 'Строитель', price: 80 },
+  { id: 'h_dino', name: 'Динозаврик', price: 110 },
+  { id: 'h_knight', name: 'Рыцарь', price: 145 },
+  { id: 'h_pirate', name: 'Пират', price: 185 },
+  { id: 'h_wizard', name: 'Волшебник', price: 230 },
+];
 function bstate(n) { const cyc = Math.floor(n / CYCLE); let r = n - cyc * CYCLE, i = 0; while (i < BP.length - 1 && r >= BP[i].n) { r -= BP[i].n; i++; } return { cyc, i, placed: r }; }
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
@@ -216,8 +229,11 @@ function buildSprites() {
     SPRC[name] = c; SPRU[name] = c.toDataURL();
   }
 }
-const sprImg = (name, cls = '') => `<img class="spr ${cls}" src="${SPRU[name]}" alt="">`;
-function applySprites(root = document) { $$('img[data-spr]', root).forEach(im => { if (SPRU[im.dataset.spr]) im.src = SPRU[im.dataset.spr]; }); }
+const owns = id => (S.owned || []).includes(id);
+const heroKey = () => (owns(S.skin) && SPRU[S.skin]) ? S.skin : 'hero';
+const sprKey = name => name === 'hero' ? heroKey() : name;
+const sprImg = (name, cls = '') => `<img class="spr ${cls}" src="${SPRU[sprKey(name)]}" alt="">`;
+function applySprites(root = document) { $$('img[data-spr]', root).forEach(im => { const k = sprKey(im.dataset.spr); if (SPRU[k]) im.src = SPRU[k]; }); }
 
 const TEX = {};
 const CRACK = [];
@@ -404,6 +420,10 @@ const T = {
   nameLetter0: 'С неё начинается твоё имя!',
   villain: 'Ха-ха! Я спрятал все буквы! Не найдёшь!',
   rateTest: 'Вот так я говорю.',
+  heroes: 'Это твои герои! Выбери, кем ты будешь.',
+  newHero: 'Ура! Новый герой!',
+  needMore: 'Собери ещё алмазов в миссиях!',
+  canBuy: 'Можно открыть нового героя!',
 };
 const VILLAIN = [T.villain];
 const N = {
@@ -430,6 +450,7 @@ const P = {
   picAns: (w, c) => `${cap(w.w)} начинается с буквы ${nm(c)}!`,
   building: i => `Строим ${BP[i].acc}.`,
   nowBuild: i => `Теперь строим ${BP[i].acc}!`,
+  heroNow: h => `Теперь ты — ${h.name}!`,
 };
 function allPhrases() {
   const keep = { mode: S.mode, name: S.name, hero: S.hero };
@@ -445,6 +466,7 @@ function allPhrases() {
     }
   }
   BP.forEach((b, i) => { out.add(P.building(i)); out.add(P.nowBuild(i)); out.add(b.done); });
+  HEROES.forEach(h => out.add(P.heroNow(h)));
   Object.assign(S, keep);
   return [...out];
 }
@@ -540,7 +562,14 @@ const FX = (() => {
 /* ---------- screens & HUD ---------- */
 let CUR = 'home';
 function show(name) { CUR = name; $$('.screen').forEach(s => { s.hidden = s.id !== 'scr-' + name; }); gemsText(); }
-function gemsText() { $$('.gemcount b').forEach(b => { b.textContent = S.gems; }); }
+const wallet = () => Math.max(0, (S.gems || 0) - (S.spent || 0));
+const nextHero = () => HEROES.find(h => !owns(h.id));
+const canBuyAny = () => { const h = nextHero(); return !!h && HEROES.some(x => !owns(x.id) && x.price <= wallet()); };
+function gemsText() {
+  $$('.gemcount b').forEach(b => { b.textContent = wallet(); });
+  const t = $('#tile-heroes'); if (t) t.classList.toggle('has-new', canBuyAny());
+  const r = $('#rw-heroes'); if (r) r.hidden = !canBuyAny();
+}
 function visibleGemCounter() { const scr = $(`#scr-${CUR}`); return scr ? scr.querySelector('.gemcount') : null; }
 function bumpGems() { gemsText(); const c = visibleGemCounter(); if (c) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
 function addGems(n, from) { S.gems += n; save(); if (from) FX.flyGem(from, Math.min(n, 5)); else bumpGems(); }
@@ -917,6 +946,7 @@ async function finishMission(run) {
   if (top.length) await rs(run, T.threeStars);
   else if (ups.length) await rs(run, T.newStars);
   if (canUnlock() && nextLocked()) await rs(run, T.nextNew);
+  if (canBuyAny()) await rs(run, T.canBuy);
   await rs(run, T.buildNow);
 }
 
@@ -1194,7 +1224,7 @@ function drawScene(bi, placed, opt = {}) {
   for (let x = 1; x < G.islandW - 1; x++) drawBlock(g, 'dirt', G.ix + x * bs, G.groundY + bs, bs);
   for (let x = 3; x < G.islandW - 3; x++) drawBlock(g, 'stone', G.ix + x * bs, G.groundY + 2 * bs, bs);
   const hh = Math.round(bs * 3.1), hw = Math.round(hh * 16 / 24);
-  g.drawImage(SPRC.hero, G.ix + Math.round(2.1 * bs - hw / 2), G.groundY - hh, hw, hh);
+  g.drawImage(SPRC[heroKey()], G.ix + Math.round(2.1 * bs - hw / 2), G.groundY - hh, hw, hh);
   const lift = opt.lift || 0;
   b.cells.forEach((cell, k) => {
     const x = G.bx + cell.x * bs, y = G.by + cell.y * bs;
@@ -1267,6 +1297,43 @@ async function buildLoop(token) {
       await say(P.nowBuild(ns.i)); if (!token.alive) return;
     } else await sleep(dur > 150 ? 60 : 15);
   }
+}
+
+/* ---------- heroes screen ---------- */
+function openHeroes() {
+  endRun(); closeModal(); show('heroes'); renderHeroes();
+  say(T.heroes);
+}
+function renderHeroes() {
+  const w = wallet(), cur = heroKey();
+  $('#hero-grid').innerHTML = HEROES.map(h => {
+    const own = owns(h.id), sel = own && h.id === cur, can = !own && h.price <= w;
+    const cls = sel ? 'sel' : own ? 'own' : can ? 'can' : 'locked';
+    const tag = sel ? '<span class="hc-tag ok">ВЫБРАН</span>'
+      : own ? '<span class="hc-tag">ВЫБРАТЬ</span>'
+      : `<span class="hc-tag price">${sprImg('gem')}<b>${h.price}</b></span>${can ? '' : `<span class="hc-bar"><i style="width:${Math.round(Math.min(1, w / h.price) * 100)}%"></i></span>`}`;
+    return `<button class="hcard ${cls}" data-h="${h.id}" aria-label="${h.name}">${!own && !can ? sprImg('i_lock', 'hc-lock') : ''}<img class="spr hc-img" src="${SPRU[h.id]}" alt=""><span class="hc-name">${h.name}</span>${tag}</button>`;
+  }).join('');
+}
+function refreshHero() { applySprites(document); const im = $('#home-hero-img'); if (im) im.src = SPRU[heroKey()]; }
+function tapHero(id, card) {
+  const h = HEROES.find(x => x.id === id); if (!h) return;
+  const [x, y] = FX.center(card);
+  if (owns(id)) {
+    S.skin = id; save(); refreshHero(); renderHeroes(); Sfx.good();
+    FX.spawn(x, y, ['#ffc62e', '#ffffff', '#39e3dc'], 20);
+    say(P.heroNow(h));
+    return;
+  }
+  if (h.price <= wallet()) {
+    S.spent = (S.spent || 0) + h.price; S.owned = [...(S.owned || ['hero']), id]; S.skin = id; save();
+    gemsText(); refreshHero(); renderHeroes(); Sfx.fanfare(); FX.confetti();
+    FX.burst(x, y - 40, 'НОВЫЙ ГЕРОЙ!', { fs: 40 });
+    say([T.newHero, P.heroNow(h)]);
+    return;
+  }
+  Sfx.bad(); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+  say(T.needMore);
 }
 
 /* ---------- parent ---------- */
@@ -1365,9 +1432,11 @@ function renderParent() {
 }
 
 /* ---------- home ---------- */
-function goHome() { endRun(); closeModal(); show('home'); applyNames(); }
+let UPDATE_READY = false;
+function maybeReload() { if (UPDATE_READY && CUR === 'home' && !RUN) { try { location.reload(); } catch (e) { /* ignore */ } } }
+function goHome() { endRun(); closeModal(); show('home'); applyNames(); maybeReload(); }
 let heroFrame = 0;
-function animHero() { heroFrame ^= 1; const im = $('#home-hero-img'); if (im && CUR === 'home') im.src = SPRU[heroFrame ? 'hero2' : 'hero']; }
+function animHero() { heroFrame ^= 1; const im = $('#home-hero-img'); if (!im || CUR !== 'home') return; const k = heroKey(); im.src = SPRU[k === 'hero' && heroFrame ? 'hero2' : k]; }
 
 /* ---------- boot ---------- */
 function boot() {
@@ -1393,7 +1462,7 @@ function boot() {
   $('#peek').addEventListener('click', () => { Sfx.bad(); say(T.villain, { pitch: .55, rate: 1.05 }); });
   $$('[data-go]').forEach(b => b.addEventListener('click', () => {
     Sfx.tap(); const g = b.dataset.go;
-    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'base') openBase();
+    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'base') openBase(); else if (g === 'heroes') openHeroes();
   }));
   $('#btn-parent').addEventListener('click', () => { Sfx.tap(); openGate(); });
   $$('[data-home]').forEach(b => b.addEventListener('click', () => { Sfx.tap(); goHome(); }));
@@ -1414,14 +1483,18 @@ function boot() {
   $('#rw-build').addEventListener('click', () => { Sfx.tap(); openBase(); });
   $('#rw-again').addEventListener('click', () => { Sfx.tap(); startMission(); });
   $('#rw-home').addEventListener('click', () => { Sfx.tap(); goHome(); });
+  $('#rw-heroes').addEventListener('click', () => { Sfx.tap(); openHeroes(); });
+  $('#hero-grid').addEventListener('click', e => { const c = e.target.closest('.hcard'); if (c) tapHero(c.dataset.h, c); });
   $('#base-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
   onVoices = () => { if (CUR === 'parent' && S.sysVoice && !$('#p-voice') && TTS.ruVoices().length) renderParent(); };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLogo).catch(() => {});
   if (PWA && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) { UPDATE_READY = true; maybeReload(); } });
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* ignore */ }
   }
-  window.__game = { S: () => S, LET, STROKES, BP, lv, unlocked, allPhrases, get RUN() { return RUN; }, get TR() { return TR; }, save };
+  window.__game = { S: () => S, LET, STROKES, BP, HEROES, lv, unlocked, allPhrases, wallet, get RUN() { return RUN; }, get TR() { return TR; }, save };
 }
 const startApp = () => { try { boot(); } catch (e) { console.error(e); } };
 if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(startApp); else startApp();

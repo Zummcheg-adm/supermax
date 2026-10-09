@@ -100,8 +100,10 @@ for k, text in enumerate(phrases):
         peak_normalize(tmp)
         subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', tmp, '-ac', '1', '-ar', '22050', '-c:a', 'libmp3lame', '-b:a', os.environ.get('BR', '32k'), mp3p], check=True)
         os.remove(tmp)
-    with wave.open(wavp) as w:
-        total_dur += w.getnframes() / w.getframerate()
+    wp = wavp if os.path.exists(wavp) else f'/home/claude/tts/wav2/{key}.wav'
+    if os.path.exists(wp):
+        with wave.open(wp) as w:
+            total_dur += w.getnframes() / w.getframerate()
     if k == 0 or not os.path.exists(wavp):
         pass
     clips[text] = base64.b64encode(open(mp3p, 'rb').read()).decode('ascii')

@@ -23,6 +23,7 @@
             <button class="pbtn tile" data-go="write" style="--c:var(--grass)"><img class="spr" data-spr="i_pencil" alt=""><span>Пропись</span></button>
             <button class="pbtn tile" data-go="tir" style="--c:var(--hero)"><img class="spr" data-spr="i_target" alt=""><span>Тир</span></button>
             <button class="pbtn tile" data-go="base" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>База</span></button>
+            <button class="pbtn tile" id="tile-heroes" data-go="heroes" style="--c:var(--cape)"><img class="spr" data-spr="i_crown" alt=""><span>Герои</span><i class="badge">!</i></button>
           </div>
         </div>
       </div>
@@ -54,6 +55,7 @@
       <div class="rw-actions">
         <button class="pbtn big pulse" id="rw-build" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>Строить</span></button>
         <button class="pbtn big" id="rw-again" style="--c:var(--hero)"><img class="spr" data-spr="i_play" alt=""><span>Ещё</span></button>
+        <button class="pbtn big" id="rw-heroes" hidden style="--c:var(--cape)"><img class="spr" data-spr="i_crown" alt=""><span>Герои</span></button>
         <button class="pbtn big" id="rw-home" aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
       </div>
     </div>
@@ -81,6 +83,16 @@
       <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
     </div>
     <div class="abc-wrap"><div class="abc-grid" id="abc-grid"></div></div>
+  </section>
+
+  <!-- HEROES -->
+  <section id="scr-heroes" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="scr-title">ГЕРОИ</div>
+      <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div class="abc-wrap"><div class="hero-grid" id="hero-grid"></div></div>
   </section>
 
   <!-- PARENT -->
