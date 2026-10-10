@@ -20,6 +20,7 @@ def read_pcm(path):
 
 
 from vowels import vowel_wav, PURE, IOT
+from cv import cv_wav, CV_NAMES
 
 
 def seg(text, speed):
@@ -30,6 +31,10 @@ def seg(text, speed):
             tp = f'/home/claude/tts/vow/v_{ord(core)}.wav'   # firm single-sound vowel
             if not os.path.exists(tp):
                 vowel_wav(core, tp)
+        elif core in CV_NAMES:
+            tp = f'/home/claude/tts/cv/c_{"_".join(str(ord(ch)) for ch in core)}.wav'   # firm «лэ», «мэ»… without the й-glide
+            if not os.path.exists(tp):
+                os.makedirs('/home/claude/tts/cv', exist_ok=True); cv_wav(core, tp)
         else:
             tp = f'/home/claude/tts/wav2/seg_{hashlib.md5((text + str(speed)).encode()).hexdigest()[:12]}.wav'
             if not os.path.exists(tp):

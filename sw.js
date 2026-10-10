@@ -1,5 +1,5 @@
 // Супер-Макс: офлайн-кэш. Версия меняется при каждой сборке.
-const V = 'supermax-5097e5bd67';
+const V = 'supermax-7ca30aacd1';
 const CORE = ['./', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(CORE))); });
 self.addEventListener('activate', e => { e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== V) await caches.delete(k); await self.clients.claim(); })()); });

@@ -24,7 +24,10 @@ with sync_playwright() as pw:
                 if random.random() < ERR_RATE:
                     w = page.query_selector(f'#stage .opts .lb:not([data-c="{inf["c"]}"])')
                     if w: w.click(force=True); page.wait_for_timeout(300)
-                page.click(f'#stage .opts .lb[data-c="{inf["c"]}"]', force=True)
+                for _ in range(6):   # «Найди все…» has several targets
+                    el = page.query_selector(f'#stage .opts .lb[data-c="{inf["c"]}"]:not([data-hit])')
+                    if not el: break
+                    el.click(force=True); page.wait_for_timeout(150)
             elif 'trace' in cls:
                 page.wait_for_function("() => window.__game.TR && !window.__game.TR.demoS", timeout=30000)
                 kinds['trace'] = kinds.get('trace', 0) + 1

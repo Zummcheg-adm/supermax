@@ -187,7 +187,7 @@ const HEROES = [
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
@@ -197,6 +197,7 @@ function load() {
   if (!(S.bp >= -1 && S.bp < BP.length)) S.bp = -1;
   if (!Array.isArray(S.bpDone)) S.bpDone = [];
   if (S.btool !== 'pick' && !BLOCKS.some(b => b.t === S.btool)) S.btool = 'planks';
+  S.fl = clamp(Math.round(+S.fl) || 2, 1, 8); S.al = clamp(Math.round(+S.al) || 3, 1, 10); S.fs = Math.max(0, +S.fs || 0);
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
 
@@ -434,6 +435,7 @@ const T = {
   nameLetter0: 'С неё начинается твоё имя!',
   villain: 'Ха-ха! Я спрятал все буквы! Не найдёшь!',
   rateTest: 'Вот так я говорю.',
+  lvlUp: 'Новый уровень! Будет сложнее!',
   heroes: 'Это твои герои! Выбери, кем ты будешь.',
   newHero: 'Ура! Новый герой!',
   needMore: 'Собери ещё алмазов в миссиях!',
@@ -459,6 +461,7 @@ const P = {
   watch: c => `Смотри, как пишется ${nom(c)}!`,
   trace: c => `Обведи пальцем ${acc(c)}!`,
   catchIt: c => isSign(c) ? `Лови ${nm(c)}!` : `Лови букву ${nm(c)}!`,
+  findAll: c => `Найди все буквы ${nm(c)}!`,
   wordEx: w => `${cap(w.w)}!`,
   picQ: w => `${cap(w.w)}! С какой буквы начинается слово ${w.w}?`,
   picAns: (w, c) => `${cap(w.w)} начинается с буквы ${nm(c)}!`,
@@ -476,6 +479,7 @@ function allPhrases() {
     for (const c of ALPHA) {
       ['thisIs', 'nomEx', 'introWords', 'findLow', 'need', 'here', 'watch', 'trace', 'catchIt'].forEach(k => out.add(P[k](c)));
       [0, 1, 2].forEach(k => out.add(P.find(c, k)));
+      if (!isSign(c)) out.add(P.findAll(c));
       for (const w of LET[c].words) { out.add(P.wordEx(w)); if (w.i === 0) { out.add(P.picQ(w)); out.add(P.picAns(w, c)); } }
     }
   }
@@ -635,18 +639,18 @@ function fitOpts(box, n, maxBs = 200) {
   const bs = Math.floor(clamp(best - 8, 58, maxBs));
   box.style.setProperty('--bs', bs + 'px'); box.style.setProperty('--gap', gap + 'px'); box.style.gridTemplateColumns = `repeat(${bc}, ${bs}px)`;
 }
-function distractors(c, n, L) {
-  const sim = SIMILAR[c] || [];
-  const out = L >= 2 ? shuffle(sim).slice(0, L >= 3 ? 2 : 1) : [];
-  const ok = x => x !== c && !out.includes(x) && (L >= 2 || !sim.includes(x));
+function distractors(c, n, sim = 0) {
+  const look = SIMILAR[c] || [];
+  const out = shuffle(look.filter(x => x !== c)).slice(0, Math.min(sim, n));
+  const ok = x => x !== c && !out.includes(x) && (sim > 0 || !look.includes(x));
   const known = shuffle(unlocked().filter(ok));
-  const half = Math.ceil(n / 2) + (L >= 2 ? 1 : 0);
+  const half = Math.ceil(n / 2) + (sim ? 1 : 0);
   while (out.length < n && known.length && out.length < half) out.push(known.pop());
   const rest = shuffle(ALPHA.filter(ok));
   while (out.length < n && rest.length) out.push(rest.pop());
   return out.slice(0, n);
 }
-const PRAISE = ['Молодец!', 'Супер!', 'Ура!', 'Класс!', 'Здорово!', 'Вот это да!', 'Точно!', 'Ты супергерой!', 'Правильно!', 'Отлично!'];
+const PRAISE = ['Молодец!', 'Супер!', 'Ура!', 'Класс!', 'Круто!', 'Вот это да!', 'Точно!', 'Ты супергерой!', 'Правильно!', 'Отлично!'];
 const praise = () => (S.name && Math.random() < .3 && (S.sysVoice || Voice.has(N.praise()))) ? N.praise() : pick(PRAISE);
 const BOOM = ['БАМ!', 'БУМ!', 'БАЦ!', 'ВЖУХ!', 'ПЫЩ!', 'ХРЯСЬ!', 'ТЫДЫЩ!', 'ДЗЫНЬ!', 'ПОУ!'];
 
@@ -664,31 +668,51 @@ async function breakBlock(b) {
 
 function choiceRound(run, o) {
   return new Promise(resolve => {
-    const box = o.box, texs = shuffle(BLOCK_TEX);
+    const box = o.box, texs = shuffle(BLOCK_TEX), need = o.count || 1, t0 = performance.now();
     box.innerHTML = o.letters.map((ch, i) => blockHTML(ch, o.low, texs[i % texs.length])).join('');
     curFit = () => fitOpts(box, o.letters.length, o.maxBs || 200); curFit();
-    let wrong = 0, done = false, lastAct = Date.now(), nags = 0;
+    const sp = o.speed;
+    if (sp && o.fast) { sp.hidden = false; sp.style.setProperty('--d', o.fast + 'ms'); sp.firstElementChild.addEventListener('animationend', () => sp.classList.add('over'), { once: true }); }
+    let wrong = 0, found = 0, done = false, lastAct = Date.now(), nags = 0;
     const idle = setInterval(() => {
       if (done || !run.alive || !box.isConnected) { clearInterval(idle); return; }
       if (!Voice.busy && Date.now() - lastAct > 13000 && nags < 3) { lastAct = Date.now(); nags++; if (run.prompt) run.prompt(); }
     }, 1000);
     box.addEventListener('click', async e => {
       lastAct = Date.now();
-      const b = e.target.closest('.lb'); if (!b || done || !run.alive || b.classList.contains('dead')) return;
+      const b = e.target.closest('.lb'); if (!b || done || !run.alive || b.classList.contains('dead') || b.dataset.hit) return;
       const ch = b.dataset.c;
       if (ch === o.target) {
-        done = true; clearInterval(idle); $$('.lb', box).forEach(x => x.classList.remove('hint'));
+        b.dataset.hit = '1'; found++;
+        const last = found >= need, ms = performance.now() - t0;
+        const fast = last && !!o.fast && wrong === 0 && ms <= o.fast;
+        if (last) { done = true; clearInterval(idle); $$('.lb', box).forEach(x => x.classList.remove('hint')); if (sp) sp.classList.add(fast ? 'win' : 'stop'); }
+        if (o.onHit) o.onHit(found, need);
         await breakBlock(b);
-        addGems(1, b); run.earned++;
-        resolve({ first: wrong === 0, wrong });
+        addGems(fast ? 2 : 1, b); run.earned += fast ? 2 : 1;
+        if (fast) { const [x, y] = FX.center(b); FX.burst(x, y - 70, 'БЫСТРО!', { fs: 38, bt: 'var(--gem)' }); setTimeout(() => Sfx.ding(), 250); }
+        if (last) resolve({ first: wrong === 0, wrong, fast, ms });
       } else {
         wrong++; Sfx.bad(); b.classList.add('shake'); setTimeout(() => b.classList.add('dead'), 400);
-        if (wrong >= 2) { const t = box.querySelector(`.lb[data-c="${o.target}"]`); if (t) t.classList.add('hint'); }
+        if (sp && !sp.classList.contains('over')) sp.classList.add('stop');
+        if (wrong >= 2) $$(`.lb[data-c="${o.target}"]`, box).forEach(t => { if (!t.dataset.hit) t.classList.add('hint'); });
         say(o.wrongSay ? o.wrongSay(ch, wrong) : [P.thisIs(ch), wrong >= 2 ? P.here(o.target) : P.need(o.target)]);
       }
     });
   });
 }
+// «Найди букву» and «Найди такую же» get harder by themselves: S.fl (1–8) grows after three fast answers in a row
+const fastMs = (k = 1) => Math.round((1500 + [6000, 5200, 4600, 4000, 3600, 3200, 2900, 2600][S.fl - 1]) * (k > 1 ? .8 * k : 1));
+function findAdapt(r) {
+  if (r.first && r.fast) { S.fs = (S.fs || 0) + 1; if (S.fs >= 3 && S.fl < 8) { S.fl++; S.fs = 0; save(); return true; } }
+  else { S.fs = 0; if (!r.first && r.wrong >= 2 && S.fl > 1) S.fl--; }
+  save(); return false;
+}
+async function lvlUp(run, n) {
+  Sfx.fanfare(); FX.confetti(); FX.burst(innerWidth / 2, innerHeight * .4, `УРОВЕНЬ ${n}!`, { fs: 52 });
+  await rs(run, T.lvlUp);
+}
+const SPEED = '<div class="speed" hidden><i></i></div>';
 
 /* ---------- tasks ---------- */
 async function tIntro(t, run) {
@@ -719,39 +743,67 @@ async function tIntro(t, run) {
 async function tMatch(t, run) {
   const c = t.c, L = lv(c);
   const low = S.lower && L >= 2;
-  const letters = shuffle([c, ...distractors(c, (L === 0 ? 3 : 4) - 1, Math.min(L, 1))]);
-  const root = setStage(`<div class="task match">${promptHTML(low ? 'Найди такую же маленькую' : 'Найди такую же')}<div class="sample">${blockHTML(c, false, 'gold')}</div><div class="opts"></div></div>`);
+  const n = Math.min(8, [4, 5, 5, 6][L] + Math.floor((S.fl - 1) / 3));
+  const letters = shuffle([c, ...distractors(c, n - 1, L >= 2 ? 1 + (S.fl >= 4 ? 1 : 0) : 0)]);
+  const root = setStage(`<div class="task match">${promptHTML(low ? 'Найди такую же маленькую' : 'Найди такую же')}<div class="sample">${blockHTML(c, false, 'gold')}</div>${SPEED}<div class="opts"></div></div>`);
   const sample = $('.sample .lb', root); sample.tabIndex = -1;
   sample.addEventListener('click', () => say(P.nomEx(c)));
   run.prompt = () => say([low ? T.matchLowQ : T.matchQ, P.thisIs(c)]);
   run.prompt();
-  const r = await choiceRound(run, { target: c, letters, low, box: $('.opts', root), maxBs: 170 });
+  const r = await choiceRound(run, { target: c, letters, low, box: $('.opts', root), maxBs: 170, speed: $('.speed', root), fast: fastMs() + 1200 });
   if (!run.alive) throw STOP;
   record(c, r.first, 'match');
+  const up = findAdapt(r);
   await rs(run, [praise(), P.nomEx(c)]);
+  if (up) await lvlUp(run, S.fl);
 }
 
 async function tFind(t, run) {
-  const c = t.c, L = lv(c);
-  const n = [3, 4, 4, 6][L];
+  const c = t.c, L = lv(c), FL = S.fl;
+  if (!isSign(c) && L >= 1 && FL >= 2 && Math.random() < .35) return tFindAll(t, run);
+  const n = Math.min(10, [4, 5, 6, 7][L] + Math.floor((FL - 1) / 2));
+  const sim = L === 0 ? (FL >= 5 ? 1 : 0) : Math.min(3, 1 + (FL >= 3 ? 1 : 0) + (L >= 3 ? 1 : 0));
   const low = S.lower && L >= 2 && Math.random() < .45;
-  const letters = shuffle([c, ...distractors(c, n - 1, L)]);
+  const letters = shuffle([c, ...distractors(c, n - 1, sim)]);
   const visual = !hasVoice();
   const extra = visual ? `<span class="tgt">${low ? c.toLowerCase() : c}</span>` : '';
-  const root = setStage(`<div class="task find">${promptHTML(isSign(c) ? 'Найди знак' : low ? 'Найди маленькую букву' : 'Найди букву', extra)}<div class="opts"></div></div>`);
+  const root = setStage(`<div class="task find">${promptHTML(isSign(c) ? 'Найди знак' : low ? 'Найди маленькую букву' : 'Найди букву', extra)}${SPEED}<div class="opts"></div></div>`);
   const phr = low ? P.findLow(c) : P.find(c, ri(0, 2));
   run.prompt = () => say(phr);
   run.prompt();
-  const r = await choiceRound(run, { target: c, letters, low, box: $('.opts', root) });
+  const r = await choiceRound(run, { target: c, letters, low, box: $('.opts', root), speed: $('.speed', root), fast: fastMs() });
   if (!run.alive) throw STOP;
   record(c, r.first, 'find');
+  const up = findAdapt(r);
   await rs(run, [praise(), P.nomEx(c)]);
+  if (up) await lvlUp(run, S.fl);
+}
+
+async function tFindAll(t, run) {
+  const c = t.c, L = lv(c), FL = S.fl;
+  const k = Math.min(4, 2 + (FL >= 4 ? 1 : 0) + (Math.random() < .3 ? 1 : 0));
+  const n = Math.min(12, 7 + FL);
+  const low = S.lower && L >= 2 && Math.random() < .35;
+  const letters = shuffle([...Array(k).fill(c), ...distractors(c, n - k, Math.min(2, 1 + (FL >= 4 ? 1 : 0)))]);
+  const visual = !hasVoice();
+  const extra = `${visual ? `<span class="tgt">${low ? c.toLowerCase() : c}</span>` : ''}<span class="tgt fa-cnt">0/${k}</span>`;
+  const root = setStage(`<div class="task find">${promptHTML('Найди все', extra)}${SPEED}<div class="opts"></div></div>`);
+  const cnt = $('.fa-cnt', root);
+  run.prompt = () => say(P.findAll(c));
+  run.prompt();
+  const r = await choiceRound(run, { target: c, letters, low, count: k, box: $('.opts', root), speed: $('.speed', root), fast: fastMs(k),
+    onHit: (f, need) => { cnt.textContent = `${f}/${need}`; cnt.classList.remove('bump'); void cnt.offsetWidth; cnt.classList.add('bump'); } });
+  if (!run.alive) throw STOP;
+  record(c, r.first, 'find');
+  const up = findAdapt(r);
+  await rs(run, [praise(), P.nomEx(c)]);
+  if (up) await lvlUp(run, S.fl);
 }
 
 async function tPic(t, run) {
   const c = t.c, L = lv(c);
   const w = pick(LET[c].words.filter(x => x.i === 0));
-  const letters = shuffle([c, ...distractors(c, (L >= 2 ? 4 : 3) - 1, Math.min(L, 1))]);
+  const letters = shuffle([c, ...distractors(c, (L >= 2 ? 4 : 3) - 1, 0)]);
   const root = setStage(`<div class="task picq">${promptHTML('С какой буквы?')}<div class="pic-body"><div class="pic-row"><button class="pic-card" data-act="say">${emoHTML(w)}<span class="word">${wordHTML(w, c, true)}</span></button></div><div class="opts"></div></div></div>`);
   run.prompt = () => say(P.picQ(w));
   run.prompt();
@@ -796,27 +848,43 @@ async function tTrace(t, run) {
   tr.destroy(); if (TR === tr) TR = null;
 }
 
+// final battle and Тир: S.al (1–10) — faster drones, more decoys and look-alike letters, a miss costs seconds
+function arcParams(boss) {
+  const a = clamp(S.al || 3, 1, 10), f = 1 + .13 * (a - 1);
+  return {
+    lvl: a, need: (boss ? 6 : 5) + Math.floor((a - 1) / 3), time: boss ? 30 : 25,
+    vmin: .11 * f, vmax: .18 * f, maxLive: Math.min(9, 5 + Math.floor(a / 2)), pT: Math.max(.24, .44 - .02 * a),
+    gap: 1.4 + .08 * a, penalty: a >= 6 ? 3 : a >= 2 ? 2 : 0, sim: a >= 3, scale: a >= 8 ? .76 : a >= 5 ? .88 : 1, amp: 1 + .1 * a,
+  };
+}
+function arcAdapt(r) {
+  if (r.hits >= r.need && r.miss <= 1 && r.left >= r.time * .2 && S.al < 10) { S.al++; save(); return 1; }
+  if (r.hits < Math.ceil(r.need * .5) && S.al > 1) { S.al--; save(); return -1; }
+  return 0;
+}
 function arcadeRound(run, target, o = {}) {
-  const need = o.need || 6, T = o.time || 30;
+  const A = arcParams(o.boss), need = A.need, T = A.time;
   const pool = (o.pool || unlocked()).filter(x => x !== target);
   const others = pool.length >= 2 ? pool : ALPHA.filter(x => x !== target && !(SIMILAR[target] || []).includes(x));
-  const root = setStage(`<div class="task arcade"><div class="arc-top">${promptHTML(isSign(target) ? 'Лови' : 'Лови букву', `<span class="tgt">${target}</span>`)}<div class="timer"><i></i></div><div class="stars">${Array.from({ length: need }, () => sprImg('star')).join('')}</div></div><div class="arena"><svg class="zaps"></svg>${sprImg('hero', 'arc-hero')}</div></div>`);
+  const look = A.sim ? (SIMILAR[target] || []).filter(x => x !== target) : [];
+  const root = setStage(`<div class="task arcade"><div class="arc-top">${promptHTML(isSign(target) ? 'Лови' : 'Лови букву', `<span class="tgt">${target}</span>`)}<div class="lvl">УР. ${A.lvl}</div><div class="timer"><i></i></div><div class="stars">${Array.from({ length: need }, () => sprImg('star')).join('')}</div></div><div class="arena" style="--ds:${A.scale}"><svg class="zaps"></svg>${sprImg('hero', 'arc-hero')}</div></div>`);
   const arena = $('.arena', root), svg = $('.zaps', root), bar = $('.timer i', root), stars = $$('.stars img', root), hero = $('.arc-hero', root);
   run.prompt = () => say(P.catchIt(target));
   return new Promise(resolve => {
-    let hits = 0, el = 0, last = 0, spawnT = .2, lastTarget = -9, alive = true, raf = 0, nagT = 0;
+    let hits = 0, miss = 0, combo = 0, el = 0, last = 0, spawnT = .2, lastTarget = -9, alive = true, raf = 0, nagT = 0;
     const drones = [];
     const W = () => arena.clientWidth, H = () => arena.clientHeight;
+    const result = () => ({ hits, need, miss, left: Math.max(0, T - el), time: T });
     function spawn(isT) {
-      const ch = isT ? target : pick(others);
+      const ch = isT ? target : (look.length && Math.random() < .35 ? pick(look) : pick(others));
       const d = document.createElement('div'); d.className = 'drone';
       const tex = pick(BLOCK_TEX); d.innerHTML = blockHTML(ch, false, tex);
       arena.append(d);
       const size = d.offsetWidth || 100, fromLeft = Math.random() < .5;
-      const o2 = { el: d, ch, tex, size, x: fromLeft ? -size - 10 : W() + 10, y0: rnd(H() * .1, Math.max(H() * .1 + 1, H() - size - 30)), vx: (fromLeft ? 1 : -1) * rnd(.11, .18) * Math.max(W(), 500), ph: rnd(0, 6.3), amp: rnd(8, 24), dead: false };
+      const o2 = { el: d, ch, tex, size, x: fromLeft ? -size - 10 : W() + 10, y0: rnd(H() * .1, Math.max(H() * .1 + 1, H() - size - 30)), vx: (fromLeft ? 1 : -1) * rnd(A.vmin, A.vmax) * Math.max(W(), 500), ph: rnd(0, 6.3), amp: rnd(8, 24) * A.amp, dead: false };
       if (isT) lastTarget = el;
       d.style.transform = `translate(${o2.x}px,${o2.y0}px)`;
-      d.addEventListener('pointerdown', ev => { ev.preventDefault(); tap(o2); });
+      d.addEventListener('pointerdown', ev => { ev.preventDefault(); tap(o2, ev); });
       drones.push(o2);
     }
     function frame(ts) {
@@ -825,7 +893,7 @@ function arcadeRound(run, target, o = {}) {
       const dt = Math.min(.05, (ts - (last || ts)) / 1000); last = ts; el += dt; spawnT -= dt; nagT += dt;
       const live = drones.filter(d => !d.dead);
       const hasT = live.some(d => d.ch === target);
-      if (live.length < 6 && (spawnT <= 0 || (!hasT && el - lastTarget > 1.4))) { spawn(!hasT || Math.random() < .42); spawnT = rnd(.85, 1.3); }
+      if (live.length < A.maxLive && (spawnT <= 0 || (!hasT && el - lastTarget > A.gap))) { spawn(!hasT || Math.random() < A.pT); spawnT = rnd(.85, 1.3) / Math.sqrt(1 + .1 * (A.lvl - 1)); }
       for (const d of drones) {
         if (d.dead) continue;
         d.x += d.vx * dt; const y = d.y0 + Math.sin(el * 2.2 + d.ph) * d.amp;
@@ -846,36 +914,42 @@ function arcadeRound(run, target, o = {}) {
       const ls = [mk('#1b1530', 14), mk('#ffc62e', 7), mk('#ffffff', 2)];
       setTimeout(() => ls.forEach(l => l.remove()), 170);
     }
-    function tap(d) {
+    function tap(d, ev) {
       if (d.dead || !alive) return;
+      const r = d.el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       if (d.ch === target) {
-        d.dead = true; hits++; nagT = 0;
-        const r = d.el.getBoundingClientRect(), ar = arena.getBoundingClientRect();
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        d.dead = true; hits++; combo++; nagT = 0;
+        const ar = arena.getBoundingClientRect();
         zap(cx - ar.left, cy - ar.top); Sfx.zap(); setTimeout(() => Sfx.crack(), 60);
         FX.spawn(cx, cy, TEX[d.tex].cols.concat(['#ffc62e', '#ffffff']), 24);
-        FX.burst(cx, cy - 40, pick(['ПИУ!', 'БАМ!', 'ВЖУХ!', 'ПЫЩ!', 'БАЦ!']), { fs: 32 });
         d.el.remove();
         if (stars[hits - 1]) stars[hits - 1].classList.add('on');
-        addGems(1, [cx, cy]); run.earned++;
-        if (hits >= need) { alive = false; cancelAnimationFrame(raf); setTimeout(() => { drones.forEach(x => x.el.remove()); resolve(hits); }, 500); }
+        const cmb = combo >= 3 && combo % 3 === 0;
+        addGems(cmb ? 2 : 1, [cx, cy]); run.earned += cmb ? 2 : 1;
+        if (cmb) { FX.burst(cx, cy - 50, `КОМБО ×${combo}!`, { fs: 34, bt: 'var(--sun)', bf: 'var(--hero)' }); setTimeout(() => Sfx.ding(), 200); }
+        else FX.burst(cx, cy - 40, pick(['ПИУ!', 'БАМ!', 'ВЖУХ!', 'ПЫЩ!', 'БАЦ!']), { fs: 32 });
+        if (hits >= need) { alive = false; cancelAnimationFrame(raf); setTimeout(() => { drones.forEach(x => x.el.remove()); resolve(result()); }, 500); }
       } else {
+        miss++; combo = 0;
         Sfx.bad(); d.el.classList.remove('nope'); void d.el.offsetWidth; d.el.classList.add('nope');
+        if (A.penalty) { el += A.penalty; FX.burst(cx, cy - 40, `−${A.penalty}`, { fs: 34, bt: 'var(--hero)', rot: 0 }); }
         if (!Voice.busy) say(P.thisIs(d.ch));
       }
     }
     function stopAll() { alive = false; cancelAnimationFrame(raf); drones.forEach(d => d.el.remove()); }
-    function finish() { if (!alive) return; stopAll(); resolve(hits); }
+    function finish() { if (!alive) return; stopAll(); resolve(result()); }
     run.prompt();
     raf = requestAnimationFrame(frame);
   });
 }
 
 async function tArcade(t, run) {
-  const hits = await arcadeRound(run, t.c, { need: 6, time: 30 });
+  const r = await arcadeRound(run, t.c, { boss: true });
   if (!run.alive) throw STOP;
-  boost(t.c, Math.min(10, hits * 2));
-  await rs(run, hits >= 6 ? T.shot3 : hits >= 3 ? T.shot2 : T.shot1);
+  boost(t.c, Math.min(10, r.hits * 2));
+  const up = arcAdapt(r);
+  await rs(run, r.hits >= r.need ? T.shot3 : r.hits >= Math.ceil(r.need / 2) ? T.shot2 : T.shot1);
+  if (up > 0) await lvlUp(run, S.al);
 }
 
 const TASKS = { intro: tIntro, match: tMatch, find: tFind, pic: tPic, trace: tTrace, arcade: tArcade };
@@ -1180,9 +1254,10 @@ async function startTir() {
     for (let k = 0; k < targets.length; k++) {
       setStage('<div class="task"></div>');
       await rs(run, k === 0 ? T.tir : T.tirNext);
-      const hits = await arcadeRound(run, targets[k], { need: 5, time: 25, pool });
+      const r = await arcadeRound(run, targets[k], { pool });
       if (!run.alive) throw STOP;
-      total += hits; boost(targets[k], Math.min(8, hits * 2));
+      total += r.hits; boost(targets[k], Math.min(8, r.hits * 2));
+      if (arcAdapt(r) > 0) await lvlUp(run, S.al);
     }
     Sfx.fanfare(); FX.confetti();
     afterPanel([
@@ -1554,6 +1629,7 @@ function renderParent() {
     <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы.</p>
     <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Есть чертежи (домик, башня, замок, ракета) — за первую постройку по чертежу +10 алмазов. Алмазы также открывают новых героев.</p>
     <p>Ошибки не наказываются: игра называет букву, на которую нажал ребёнок, а после второй ошибки подсвечивает нужную.</p>
+    <p>«Найди букву» и финальный бой усложняются сами: после трёх быстрых ответов подряд растёт уровень (больше блоков, похожие буквы, «найди все»), в бою — быстрее дроны и промах отнимает секунды. Если не получается — уровень снижается. Сейчас: найди букву — ${S.fl} из 8, бой — ${S.al} из 10.</p>
     <p>Лучше одна-две миссии в день, чем час подряд. Прогресс хранится в этом браузере на этом устройстве.</p>
   </section>`;
   const on = (id, ev, fn) => { const el = $('#' + id); if (el) el.addEventListener(ev, fn); };
