@@ -164,10 +164,16 @@ const BP = [
     '.rWWWWWr.',
     'rrWkkkWrr',
     'rr.kkk.rr'] },
+  { name: 'Будка', acc: 'будку', done: 'Ура! Будка для Герды построена!', kennel: true, ox0: 11, rows: [
+    '..r..',
+    '.rrr.',
+    'rrrrr',
+    'ppkpp',
+    'pkkkp'] },
 ];
 BP.forEach(b => {
   b.h = b.rows.length; b.w = Math.max(...b.rows.map(r => r.length)); b.cells = [];
-  b.ox = Math.floor((WW - b.w) / 2); b.oy = WH - b.h; b.set = new Set();
+  b.ox = b.ox0 ?? Math.floor((WW - b.w) / 2); b.oy = WH - b.h; b.set = new Set();
   for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const ch = b.rows[y][x]; if (ch && ch !== '.') { b.cells.push({ x, y, t: BCH[ch] }); b.set.add((b.oy + y) * WW + b.ox + x); } }
   b.n = b.cells.length;
 });
@@ -187,7 +193,7 @@ const HEROES = [
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, tank: 1, tankSeen: 0, petsSeen: 0, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
@@ -436,6 +442,17 @@ const T = {
   villain: 'Ха-ха! Я спрятал все буквы! Не найдёшь!',
   rateTest: 'Вот так я говорю.',
   lvlUp: 'Новый уровень! Будет сложнее!',
+  petsHello: 'Смотри, кто с нами! Винни, Элли, Герда и малыш Даниил!',
+  vinni: 'Это Винни! Гав-гав!', vinni2: 'Винни хочет поиграть!',
+  elli: 'Это Элли! Гав!', elli2: 'Элли виляет хвостиком!',
+  gerda: 'Это Герда! Она охраняет дом.', gerda2: 'Герда машет хвостом!',
+  baby: 'Это малыш Даниил! Он болеет за тебя!', baby2: 'Даниил смеётся: агу!',
+  foundV: 'Винни нашёл букву!', foundE: 'Элли нашла букву!', foundG: 'Герда нашла букву!',
+  kennelLove: 'Герде нравится её будка!',
+  tanks: 'Танчики! Подбивай только танки с нужной буквой и береги сундук!',
+  tankHit: 'Ой! Наш танк подбит!', tankLost: 'Танки закончились. Давай ещё раз!', chestLost: 'Сундук разбит! Давай ещё раз!',
+  tankWin: 'Победа! Танковый бой выигран!',
+  puVinni: 'Винни гавкнул, и танки замерли!', puElli: 'Элли принесла ещё одну жизнь!', puGerda: 'Герда охраняет сундук!', puBaby: 'Малыш Даниил дал тебе щит!',
   heroes: 'Это твои герои! Выбери, кем ты будешь.',
   newHero: 'Ура! Новый герой!',
   needMore: 'Собери ещё алмазов в миссиях!',
@@ -462,6 +479,7 @@ const P = {
   trace: c => `Обведи пальцем ${acc(c)}!`,
   catchIt: c => isSign(c) ? `Лови ${nm(c)}!` : `Лови букву ${nm(c)}!`,
   findAll: c => `Найди все буквы ${nm(c)}!`,
+  tankFind: c => isSign(c) ? `Подбей танки с ${instr(c)}!` : `Подбей танки с буквой ${nm(c)}!`,
   wordEx: w => `${cap(w.w)}!`,
   picQ: w => `${cap(w.w)}! С какой буквы начинается слово ${w.w}?`,
   picAns: (w, c) => `${cap(w.w)} начинается с буквы ${nm(c)}!`,
@@ -480,6 +498,7 @@ function allPhrases() {
       ['thisIs', 'nomEx', 'introWords', 'findLow', 'need', 'here', 'watch', 'trace', 'catchIt'].forEach(k => out.add(P[k](c)));
       [0, 1, 2].forEach(k => out.add(P.find(c, k)));
       if (!isSign(c)) out.add(P.findAll(c));
+      out.add(P.tankFind(c));
       for (const w of LET[c].words) { out.add(P.wordEx(w)); if (w.i === 0) { out.add(P.picQ(w)); out.add(P.picAns(w, c)); } }
     }
   }
@@ -533,6 +552,9 @@ const Sfx = (() => {
     ding() { tone(1319, .12, { v: .11, type: 'triangle' }); tone(1760, .1, { at: .06, v: .08, type: 'triangle' }); },
     fanfare() { [[523, 0], [659, .12], [784, .24], [1047, .36], [784, .52], [1047, .64]].forEach(([f, a]) => tone(f, .2, { at: a, v: .14 })); },
     whoosh() { noise(1.2, { v: .35, f: 500, q: .4 }); },
+    bark() { [0, .18].forEach(a => { tone(620, .1, { at: a, to: 300, type: 'square', v: .13 }); noise(.07, { at: a, v: .16, f: 1100 }); }); },
+    giggle() { [740, 900, 780, 1040, 880].forEach((f, i) => tone(f, .07, { at: i * .075, type: 'triangle', v: .1 })); },
+    shot() { tone(1050, .07, { to: 420, type: 'square', v: .08 }); noise(.04, { v: .1, f: 2400 }); },
   };
 })();
 
@@ -610,12 +632,12 @@ function closeModal() { $('#modal').hidden = true; MODAL_CB = null; }
 /* ---------- runs (missions / free modes) ---------- */
 let RUN = null, TR = null, curFit = null;
 function newRun(kind) { endRun(); const run = RUN = { kind, alive: true, earned: 0, before: {}, tasks: [], i: 0, prompt: null }; ALPHA.forEach(c => { run.before[c] = lv(c); }); return run; }
-function endRun() { if (RUN) RUN.alive = false; RUN = null; Voice.stop(); curFit = null; if (TR) { TR.destroy(); TR = null; } buildStop(); }
+function endRun() { if (RUN) RUN.alive = false; RUN = null; Voice.stop(); curFit = null; if (TR) { TR.destroy(); TR = null; } buildStop(); tkStop(); clearHelpers(); }
 async function rs(run, text, o) { if (!run.alive) throw STOP; await say(text, o); if (!run.alive) throw STOP; }
 async function rsPick(run, list) { if (!run.alive) throw STOP; await sayPick(list); if (!run.alive) throw STOP; }
 async function rsleep(run, ms) { if (!run.alive) throw STOP; await sleep(ms); if (!run.alive) throw STOP; }
 const stageEl = () => $('#stage');
-function setStage(html) { const st = stageEl(); curFit = null; st.innerHTML = html; st.dataset.ti = RUN && RUN.i != null ? RUN.i : ''; applySprites(st); return st.firstElementChild; }
+function setStage(html) { clearHelpers(); const st = stageEl(); curFit = null; st.innerHTML = html; st.dataset.ti = RUN && RUN.i != null ? RUN.i : ''; applySprites(st); return st.firstElementChild; }
 function waitClick(el) { return new Promise(r => el.addEventListener('click', () => { Sfx.tap(); r(); }, { once: true })); }
 
 function promptHTML(text, extra = '', tools = '') {
@@ -695,8 +717,13 @@ function choiceRound(run, o) {
       } else {
         wrong++; Sfx.bad(); b.classList.add('shake'); setTimeout(() => b.classList.add('dead'), 400);
         if (sp && !sp.classList.contains('over')) sp.classList.add('stop');
-        if (wrong >= 2) $$(`.lb[data-c="${o.target}"]`, box).forEach(t => { if (!t.dataset.hit) t.classList.add('hint'); });
-        say(o.wrongSay ? o.wrongSay(ch, wrong) : [P.thisIs(ch), wrong >= 2 ? P.here(o.target) : P.need(o.target)]);
+        let dog = null;
+        if (wrong >= 2) {
+          const left = $$(`.lb[data-c="${o.target}"]`, box).filter(t => !t.dataset.hit);
+          left.forEach(t => t.classList.add('hint'));
+          if (wrong === 2 && left[0]) dog = dogHelp(left[0]);
+        }
+        say(o.wrongSay ? o.wrongSay(ch, wrong) : [P.thisIs(ch), ...(dog ? [dog.found()] : []), wrong >= 2 ? P.here(o.target) : P.need(o.target)]);
       }
     });
   });
@@ -1434,8 +1461,17 @@ function bHeader() {
   nm2.textContent = b.name.toUpperCase(); bw.hidden = cnt.hidden = false;
   $('#build-bar').style.width = (d / n * 100).toFixed(1) + '%'; cnt.textContent = `${d}/${n}`;
 }
+function bDogs() {
+  const box = $('#bdogs'), G = BV.g; if (!box || !G) return;
+  box.style.setProperty('--dh', Math.round(G.cs * 1.45) + 'px');
+  if (!box.childElementCount) box.innerHTML = ['vinni', 'elli'].map((id, i) => `<button class="bdog trot t${i}" data-pet="${id}" aria-label="${PETS[id].name}"><img class="spr" src="${SPRU[PETS[id].spr]}" alt=""></button>`).join('') +
+    `<button class="bdog gerda" data-pet="gerda" aria-label="Герда" hidden><img class="spr" src="${SPRU.dog_gerda}" alt=""></button>`;
+  const k = BP.find(b => b.kennel), gd = $('.bdog.gerda', box), ok = !!k && bpProgress(k)[0] === k.n;
+  gd.hidden = !ok;
+  if (ok) { const h = G.cs * 1.6, w = h * 24 / 17; gd.style.left = Math.round(G.ox + (k.ox + k.w / 2) * G.cs - w / 2) + 'px'; }
+}
 function bCheck(added) {
-  bHeader();
+  bHeader(); bDogs();
   const b = curBP(); if (!b) return;
   const [d, n] = bpProgress(b);
   if (d < n) { BV.done = false; return; }
@@ -1514,7 +1550,7 @@ async function openBuild() {
   BV.token = { alive: true }; BV.press = null; BV.busy = false; BV.lift = 0; BV.anims = [];
   show('build'); bHotbar(); bHeader();
   await nextFrame();
-  bLayout();
+  bLayout(); bDogs();
   const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
   bReq();
   if (!S.buildSeen) { S.buildSeen = 1; save(); say(wallet() > 0 ? [T.build, T.buildCost] : [T.build, T.buildEmpty]); }
@@ -1522,6 +1558,455 @@ async function openBuild() {
   else say(T.buildHi);
 }
 function buildStop() { BV.token.alive = false; BV.press = null; BV.lift = 0; BV.busy = false; }
+
+/* ---------- собаки Винни, Элли, Герда и малыш Даниил ---------- */
+const PETS = {
+  vinni: { spr: 'dog_vinni', name: 'Винни', lines: () => [T.vinni, T.vinni2], found: () => T.foundV },
+  elli: { spr: 'dog_elli', name: 'Элли', lines: () => [T.elli, T.elli2], found: () => T.foundE },
+  gerda: { spr: 'dog_gerda', name: 'Герда', lines: () => [T.gerda, T.gerda2], found: () => T.foundG },
+  baby: { spr: 'baby', name: 'Даниил', lines: () => [T.baby, T.baby2] },
+};
+const PET_N = {};
+function petTap(id, el) {
+  const p = PETS[id]; if (!p) return;
+  const im = el && (el.querySelector('img:last-of-type') || el);
+  if (im && im.animate) im.animate([{ translate: '0 0' }, { translate: '0 -30%' }, { translate: '0 0' }], { duration: 420, easing: 'ease-out' });
+  if (id === 'baby') { Sfx.giggle(); if (im && SPRU.baby2) { im.src = SPRU.baby2; setTimeout(() => { im.src = SPRU.baby; }, 1400); } } else Sfx.bark();
+  const lines = (CUR === 'build' && id === 'gerda') ? [T.kennelLove] : p.lines();
+  PET_N[id] = ((PET_N[id] ?? -1) + 1) % lines.length;
+  say(lines[PET_N[id]]);
+}
+function petsHop() { $$('#pets .pet img:last-of-type').forEach((im, i) => { if (im.animate) im.animate([{ translate: '0 0' }, { translate: '0 -24%' }, { translate: '0 0' }], { duration: 380, delay: i * 120, easing: 'ease-out' }); }); }
+// собака прибегает к нужному блоку, когда никак не получается
+const HELPERS = ['vinni', 'elli', 'gerda'];
+function dogHelp(el) {
+  const id = pick(HELPERS), p = PETS[id], c = SPRC[p.spr], r = el.getBoundingClientRect();
+  const h = clamp(r.height * .6, 44, 100), w = h * c.width / c.height;
+  const im = new Image(); im.src = SPRU[p.spr]; im.className = 'helper-dog'; im.style.height = h + 'px';
+  const x1 = r.left - w * .55, y1 = r.bottom - h * .92;
+  $('#fxl').append(im);
+  if (im.animate) im.animate([{ transform: `translate(${-w - 30}px,${y1}px)` }, { transform: `translate(${x1}px,${y1}px)` }], { duration: 700, easing: 'ease-out', fill: 'forwards' });
+  else im.style.transform = `translate(${x1}px,${y1}px)`;
+  setTimeout(() => { Sfx.bark(); im.classList.add('wag'); }, 650);
+  return p;
+}
+const clearHelpers = () => $$('.helper-dog').forEach(x => x.remove());
+
+/* ---------- «Танчики»: подбей танки с нужной буквой и береги сундук ---------- */
+const TN = 26;   // поле 26×26 клеточек (13×13 плиток по 2×2)
+const TK_MAPS = [
+  ['.............',
+   '.bb.......bb.',
+   '.b..b...b..b.',
+   '....bb.bb....',
+   's...b.b.b...s',
+   '....b...b....',
+   '.gg.b...b.gg.',
+   '.............',
+   'bb..ss.ss..bb',
+   '.............',
+   '.b.bb...bb.b.',
+   '.b...bbb...b.',
+   '.....b.b.....'],
+  ['.............',
+   '..b..g.g..b..',
+   '..b..b.b..b..',
+   'bbb.......bbb',
+   '....s...s....',
+   '.gg.bbbbb.gg.',
+   '.............',
+   '.b.b.s.s.b.b.',
+   '.b.b.....b.b.',
+   '...b.bbb.b...',
+   'g...........g',
+   '..b..bbb..b..',
+   '..b..b.b..b..'],
+  ['.............',
+   '.ggg.b.b.ggg.',
+   '.g.g.b.b.g.g.',
+   '.ggg.....ggg.',
+   '...s.bbb.s...',
+   '.b.........b.',
+   '.b.ss.g.ss.b.',
+   '.b.........b.',
+   '...bbb.bbb...',
+   '.g.........g.',
+   '.g.b.....b.g.',
+   '...b.bbb.b...',
+   '.....b.b.....'],
+  ['.............',
+   '.s.s.s.s.s.s.',
+   '.............',
+   'bbb.bb.bb.bbb',
+   '..b.......b..',
+   '..b.s.g.s.b..',
+   '..b.......b..',
+   'bbb.bb.bb.bbb',
+   '.............',
+   '.g.s.b.b.s.g.',
+   '.g.........g.',
+   '...b.bbb.b...',
+   '.....b.b.....'],
+];
+const TK_DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+const TK_SPAWN = [[0, 0], [12, 0], [24, 0]];
+const TK_P0 = [8, 24];
+const TK_CHEST = [12, 24];
+const TK_WALLS = [];   // клеточки кирпичей вокруг сундука
+for (let y = 22; y < 26; y++) for (let x = 10; x < 16; x++) if (!(x >= 12 && x < 14 && y >= 24)) TK_WALLS.push(y * TN + x);
+const TK = { on: false, raf: 0, dir: -1, firing: false, padId: null, fireId: null, keys: {}, state: 'off' };
+function tkCfg(L) {
+  return { need: 4 + Math.floor(L / 2), maxOn: Math.min(6, 2 + Math.ceil(L / 3)), eSpeed: 2.4 + .22 * L, fire: .75 + .12 * L,
+    pT: Math.max(.3, .5 - .02 * L), gap: Math.max(1.1, 3 - .18 * L), look: L >= 3, bSpeed: 8 + .4 * L };
+}
+function tkPickTarget() {
+  const pool = unlocked();
+  const weak = pool.slice().sort((a, b) => S.L[a].sc - S.L[b].sc);
+  return pick(weak.slice(0, Math.max(3, Math.ceil(weak.length / 2))));
+}
+function openTanks() {
+  if (needFirstMission()) return;
+  endRun(); closeModal(); show('tanks');
+  tkNew(true);
+}
+function tkNew(first) {
+  tkStop(); clearHelpers();
+  const L = clamp(S.tank || 1, 1, 10), cfg = tkCfg(L), target = tkPickTarget();
+  const map = TK_MAPS[(L - 1) % TK_MAPS.length], g = new Uint8Array(TN * TN);
+  map.forEach((row, ty) => { for (let tx = 0; tx < 13; tx++) { const ch = row[tx], v = ch === 'b' ? 1 : ch === 's' ? 2 : ch === 'g' ? 3 : 0; if (v) for (let k = 0; k < 4; k++) g[(ty * 2 + (k >> 1)) * TN + tx * 2 + (k & 1)] = v; } });
+  for (let k = 0; k < 4; k++) g[(TK_CHEST[1] + (k >> 1)) * TN + TK_CHEST[0] + (k & 1)] = 4;
+  TK_WALLS.forEach(i => { g[i] = 1; });
+  const pool = unlocked().filter(c => c !== target);
+  Object.assign(TK, {
+    L, cfg, target, g, dirty: true, tanks: [], bullets: [], booms: [], pu: null, puT: rnd(9, 14), got: 0, lives: 3,
+    spawnT: .6, spawnK: 0, freeze: 0, guard: 0, state: 'play', endT: 0, last: 0, sayT: 0,
+    decoys: pool.length >= 2 ? pool : ALPHA.filter(c => c !== target && !(SIMILAR[target] || []).includes(c)),
+    look: cfg.look ? (SIMILAR[target] || []).filter(c => c !== target) : [],
+  });
+  TK.p = tkTank(TK_P0[0], TK_P0[1], null); TK.p.speed = 5; TK.p.shield = 3; TK.p.max = 2;
+  $('#tk-over').hidden = true;
+  $('#tk-letter').textContent = target;
+  $('#tk-lvl').textContent = `УР. ${L}`;
+  tkHud();
+  TK.on = true; tkLayout();
+  TK.raf = requestAnimationFrame(tkLoop);
+  say(first && !S.tankSeen ? [T.tanks, P.tankFind(target)] : P.tankFind(target));
+  if (!S.tankSeen) { S.tankSeen = 1; save(); }
+}
+function tkStop() { TK.on = false; cancelAnimationFrame(TK.raf); TK.dir = -1; TK.firing = false; TK.padId = TK.fireId = null; const k = $('#tk-pad .knob'); if (k) k.style.translate = '0 0'; }
+function tkTank(x, y, ch) { return { x, y, dir: 0, ch, speed: 0, alive: true, spawn: 0, shield: 0, stun: 0, fireT: rnd(.8, 1.8), turnT: rnd(.5, 1.5), life: rnd(14, 20), nb: 0, max: 1, anim: 0, flash: 0 }; }
+function tkHud() {
+  $('#tk-stars').innerHTML = Array.from({ length: TK.cfg.need }, (_, i) => sprImg('star', i < TK.got ? 'on' : '')).join('');
+  $('#tk-lives').innerHTML = Array.from({ length: TK.lives }, () => sprImg('heart')).join('');
+}
+function tkLayout() {
+  const box = $('#tk-arena'), cv = $('#tk-cv'); if (!box || !cv) return;
+  const W = box.clientWidth, H = box.clientHeight; if (!W || !H) return;
+  const s = Math.max(6, Math.floor(Math.min(W, H) / TN)), side = s * TN, dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.style.width = cv.style.height = side + 'px';
+  cv.width = cv.height = Math.round(side * dpr);
+  Object.assign(TK, { s, side, dpr, dirty: true });
+}
+function tkCell(x, y) { return (x < 0 || y < 0 || x >= TN || y >= TN) ? 2 : TK.g[y * TN + x]; }
+function tkFree(x, y, self, strict) {
+  if (x < -.001 || y < -.001 || x > TN - 2 + .001 || y > TN - 2 + .001) return false;
+  const x0 = Math.floor(x + .02), x1 = Math.floor(x + 1.98), y0 = Math.floor(y + .02), y1 = Math.floor(y + 1.98);
+  for (let yy = y0; yy <= y1; yy++) for (let xx = x0; xx <= x1; xx++) { const v = tkCell(xx, yy); if (v === 1 || v === 2 || v === 4) return false; }
+  const all = TK.tanks.concat(TK.p ? [TK.p] : []);
+  for (const t of all) if (t !== self && t.alive && Math.abs(t.x - x) < 1.96 && Math.abs(t.y - y) < 1.96) {
+    if (!strict && Math.abs(t.x - self.x) < 1.96 && Math.abs(t.y - self.y) < 1.96) continue;   // уже касаются — не застревать
+    return false;
+  }
+  return true;
+}
+function tkMove(t, dir, dt) {
+  if (t.dir !== dir) {
+    if ((dir & 1) !== (t.dir & 1)) {
+      const ox = t.x, oy = t.y;
+      if (dir & 1) t.y = Math.round(t.y); else t.x = Math.round(t.x);
+      if (!tkFree(t.x, t.y, t)) { t.x = ox; t.y = oy; }
+    }
+    t.dir = dir;
+  }
+  const [dx, dy] = TK_DIRS[dir]; let left = t.speed * dt, moved = false;
+  while (left > 1e-6) {
+    const st = Math.min(.2, left), nx = t.x + dx * st, ny = t.y + dy * st;
+    if (!tkFree(nx, ny, t)) break;
+    t.x = nx; t.y = ny; left -= st; moved = true;
+  }
+  if (moved) t.anim += dt;
+  return moved;
+}
+function tkFire(t) {
+  if (t.nb >= t.max || t.spawn > 0) return;
+  const [dx, dy] = TK_DIRS[t.dir];
+  TK.bullets.push({ x: t.x + 1 + dx * 1.05, y: t.y + 1 + dy * 1.05, dir: t.dir, sp: t === TK.p ? 15 : TK.cfg.bSpeed, own: t });
+  t.nb++;
+  if (t === TK.p) Sfx.shot();
+}
+function tkBoom(x, y, big) {
+  TK.booms.push({ x, y, t: 0, big });
+  const s = TK.s, r = $('#tk-cv').getBoundingClientRect();
+  FX.spawn(r.left + x * s, r.top + y * s, ['#ffc62e', '#ff8a1f', '#e8363f', '#ffffff'], big ? 26 : 8, { speed: big ? .8 : .35, size: big ? 1 : .6 });
+}
+function tkWalls(v) { TK_WALLS.forEach(i => { TK.g[i] = v; }); TK.dirty = true; }
+function tkPower(kind) {
+  const p = TK.p, s = TK.s, r = $('#tk-cv').getBoundingClientRect(), cx = r.left + (p.x + 1) * s, cy = r.top + (p.y + 1) * s;
+  Sfx.good();
+  if (kind === 'vinni') { TK.freeze = 6; Sfx.bark(); FX.burst(cx, cy - 40, 'ГАВ!', { fs: 36 }); say(T.puVinni); }
+  if (kind === 'elli') { TK.lives = Math.min(5, TK.lives + 1); tkHud(); Sfx.bark(); FX.burst(cx, cy - 40, '+1 ЖИЗНЬ', { fs: 30 }); say(T.puElli); }
+  if (kind === 'gerda') { TK.guard = 15; tkWalls(2); Sfx.bark(); FX.burst(cx, cy - 40, 'ГЕРДА!', { fs: 34 }); say(T.puGerda); }
+  if (kind === 'baby') { p.shield = 10; Sfx.giggle(); FX.burst(cx, cy - 40, 'ЩИТ!', { fs: 36 }); say(T.puBaby); }
+}
+function tkPlaceSpot() {
+  for (let k = 0; k < 40; k++) {
+    const x = ri(0, 12) * 2, y = ri(2, 10) * 2;
+    let ok = true;
+    for (let yy = y; yy < y + 2; yy++) for (let xx = x; xx < x + 2; xx++) if (tkCell(xx, yy)) ok = false;
+    if (ok) return [x, y];
+  }
+  return null;
+}
+function tkHitTank(t, b) {
+  const s = TK.s, r = $('#tk-cv').getBoundingClientRect(), cx = r.left + (t.x + 1) * s, cy = r.top + (t.y + 1) * s;
+  if (t === TK.p) {
+    if (t.shield > 0) return;
+    TK.lives--; tkHud(); tkBoom(t.x + 1, t.y + 1, true); Sfx.boom(); Sfx.bad();
+    if (TK.lives <= 0) { t.alive = false; tkEnd(false, T.tankLost); return; }
+    Object.assign(t, { x: TK_P0[0], y: TK_P0[1], dir: 0, shield: 3 });
+    if (!tkFree(t.x, t.y, t)) t.shield = 4;
+    say(T.tankHit);
+    return;
+  }
+  if (b.own !== TK.p) return;
+  if (t.ch === TK.target) {
+    t.alive = false; TK.got++; tkHud(); tkBoom(t.x + 1, t.y + 1, true); Sfx.boom(); Sfx.crack();
+    FX.burst(cx, cy - 30, pick(['БАБАХ!', 'БУМ!', 'ТЫДЫЩ!', 'БАЦ!']), { fs: 34 });
+    addGems(1, [cx, cy]);
+    boost(TK.target, 3);
+    if (!Voice.busy) say(P.nomEx(TK.target));
+    if (TK.got >= TK.cfg.need) tkEnd(true);
+    else if (TK.got === 2 || TK.got === 5) { const sp = tkPlaceSpot(); if (sp && !TK.pu) TK.pu = { x: sp[0], y: sp[1], kind: pick(['vinni', 'elli', 'gerda', 'baby']), t: 12 }; }
+  } else {
+    t.stun = .7; t.flash = .35; Sfx.ding();
+    FX.burst(cx, cy - 30, 'ДЗЫНЬ!', { fs: 28, bt: 'var(--gem)' });
+    if (!Voice.busy || performance.now() - TK.sayT > 2500) { TK.sayT = performance.now(); say(P.thisIs(t.ch)); }
+  }
+}
+function tkUpdate(dt) {
+  const cfg = TK.cfg, p = TK.p;
+  // игрок
+  const kd = TK.keys, kdir = kd.ArrowUp || kd.KeyW ? 0 : kd.ArrowRight || kd.KeyD ? 1 : kd.ArrowDown || kd.KeyS ? 2 : kd.ArrowLeft || kd.KeyA ? 3 : -1;
+  const dir = TK.dir >= 0 ? TK.dir : kdir;
+  if (p.alive) {
+    if (dir >= 0) tkMove(p, dir, dt);
+    p.shield = Math.max(0, p.shield - dt);
+    p.fireT -= dt;
+    if ((TK.firing || kd.Space || kd.Enter) && p.fireT <= 0) { tkFire(p); p.fireT = .32; }
+  }
+  // сундук под охраной Герды
+  if (TK.guard > 0) { TK.guard -= dt; if (TK.guard <= 0) tkWalls(1); }
+  if (TK.freeze > 0) TK.freeze -= dt;
+  // новые танки
+  TK.spawnT -= dt;
+  const live = TK.tanks.filter(t => t.alive);
+  if (TK.spawnT <= 0 && live.length < cfg.maxOn) {
+    const order = [1, 0, 2], sp = TK_SPAWN[order[TK.spawnK++ % 3]];
+    const probe = { x: sp[0], y: sp[1] };
+    if (tkFree(sp[0], sp[1], probe, true)) {
+      const hasT = live.some(t => t.ch === TK.target);
+      const ch = (!hasT || Math.random() < cfg.pT) ? TK.target : (TK.look.length && Math.random() < .35 ? pick(TK.look) : pick(TK.decoys));
+      const t = tkTank(sp[0], sp[1], ch); t.dir = 2; t.speed = cfg.eSpeed * (ch === TK.target ? 1 : .92); t.spawn = .9;
+      TK.tanks.push(t);
+    }
+    TK.spawnT = cfg.gap;
+  }
+  // танки Глюка
+  for (const t of TK.tanks) {
+    if (!t.alive) continue;
+    if (t.spawn > 0) { t.spawn -= dt; continue; }
+    t.flash = Math.max(0, t.flash - dt);
+    if (t.ch !== TK.target) { t.life -= dt; if (t.life <= 0 && Math.hypot(t.x - p.x, t.y - p.y) > 5) { t.alive = false; tkBoom(t.x + 1, t.y + 1, false); continue; } }
+    if (TK.freeze > 0 || t.stun > 0) { t.stun = Math.max(0, t.stun - dt); continue; }
+    t.turnT -= dt; t.fireT -= dt;
+    const moved = tkMove(t, t.dir, dt);
+    if (!moved || t.turnT <= 0) {
+      const want = [];
+      const tx = TK_CHEST[0];
+      want.push(2); if (TK.L >= 3) want.push(2);
+      want.push(t.x < tx - 1 ? 1 : t.x > tx + 1 ? 3 : 2);
+      if (p.alive) want.push(Math.abs(p.x - t.x) > Math.abs(p.y - t.y) ? (p.x > t.x ? 1 : 3) : (p.y > t.y ? 2 : 0));
+      want.push(0, 1, 3, ri(0, 3));
+      const opts = want.filter(d => { const [dx, dy] = TK_DIRS[d]; return tkFree(t.x + dx * .3, t.y + dy * .3, t) || (d & 1) !== (t.dir & 1); });
+      t.dir = pick(opts.length ? opts : [ri(0, 3)]);
+      t.turnT = rnd(.7, 2.2);
+    }
+    if (t.fireT <= 0) { tkFire(t); t.fireT = rnd(1.1, 2.6) / cfg.fire; }
+  }
+  TK.tanks = TK.tanks.filter(t => t.alive || TK.bullets.some(b => b.own === t));
+  // снаряды
+  for (const b of TK.bullets) {
+    if (b.dead) continue;
+    let left = b.sp * dt;
+    while (left > 0 && !b.dead) {
+      const st = Math.min(.25, left); left -= st;
+      const [dx, dy] = TK_DIRS[b.dir]; b.x += dx * st; b.y += dy * st;
+      if (b.x < 0 || b.y < 0 || b.x > TN || b.y > TN) { b.dead = true; break; }
+      // стены: полоска в 2 клеточки поперёк полёта
+      const cells = b.dir & 1 ? [[Math.floor(b.x), Math.floor(b.y - 1)], [Math.floor(b.x), Math.floor(b.y)]] : [[Math.floor(b.x - 1), Math.floor(b.y)], [Math.floor(b.x), Math.floor(b.y)]];
+      let hit = 0;
+      for (const [cx, cy] of cells) { const v = tkCell(cx, cy); if (v === 1 || v === 2 || v === 4) hit = Math.max(hit, v === 4 ? 4 : v); }
+      if (hit) {
+        b.dead = true;
+        if (hit === 4 || cells.some(([cx, cy]) => tkCell(cx, cy) === 4)) { tkBoom(TK_CHEST[0] + 1, TK_CHEST[1] + 1, true); Sfx.boom(); for (let k = 0; k < 4; k++) TK.g[(TK_CHEST[1] + (k >> 1)) * TN + TK_CHEST[0] + (k & 1)] = 0; TK.dirty = true; tkEnd(false, T.chestLost); return; }
+        let broke = false;
+        for (const [cx, cy] of cells) if (tkCell(cx, cy) === 1) { TK.g[cy * TN + cx] = 0; broke = true; }
+        if (broke) { TK.dirty = true; if (b.own === p) Sfx.crack(); } else if (b.own === p) Sfx.ding();
+        tkBoom(b.x, b.y, false);
+        break;
+      }
+      // танки
+      const all = TK.tanks.concat([p]);
+      for (const t of all) {
+        if (!t.alive || t === b.own || t.spawn > 0) continue;
+        if (b.x > t.x + .05 && b.x < t.x + 1.95 && b.y > t.y + .05 && b.y < t.y + 1.95) { b.dead = true; tkHitTank(t, b); break; }
+      }
+      if (TK.state !== 'play') return;
+    }
+  }
+  // снаряд против снаряда
+  for (const a of TK.bullets) if (!a.dead && a.own === p) for (const b of TK.bullets) if (!b.dead && b.own !== p && Math.abs(a.x - b.x) < .7 && Math.abs(a.y - b.y) < .7) { a.dead = b.dead = true; tkBoom(a.x, a.y, false); }
+  for (const b of TK.bullets) if (b.dead) b.own.nb = Math.max(0, b.own.nb - 1);
+  TK.bullets = TK.bullets.filter(b => !b.dead);
+  // бонусы
+  if (TK.pu) { TK.pu.t -= dt; if (TK.pu.t <= 0) TK.pu = null; else if (Math.abs(TK.pu.x - p.x) < 1.6 && Math.abs(TK.pu.y - p.y) < 1.6) { const k = TK.pu.kind; TK.pu = null; tkPower(k); } }
+  else { TK.puT -= dt; if (TK.puT <= 0) { TK.puT = rnd(15, 22); const sp = tkPlaceSpot(); if (sp) TK.pu = { x: sp[0], y: sp[1], kind: pick(['vinni', 'elli', 'gerda', 'baby']), t: 11 }; } }
+  TK.booms = TK.booms.filter(o => (o.t += dt) < (o.big ? .5 : .22));
+}
+function tkEnd(win, phrase) {
+  if (TK.state !== 'play') return;
+  TK.state = win ? 'win' : 'lose'; TK.dir = -1; TK.firing = false;
+  setTimeout(() => {
+    if (!TK.on) return;
+    const ov = $('#tk-over');
+    if (win) {
+      S.tank = Math.min(10, (S.tank || 1) + 1); save();
+      addGems(3, FX.center($('#tk-cv')));
+      Sfx.fanfare(); FX.confetti();
+    }
+    ov.innerHTML = `<div class="banner">${win ? 'ПОБЕДА!' : 'ЕЩЁ РАЗОК!'}</div>
+      <div class="tk-cheer">${win ? ['dog_vinni', 'dog_elli', 'baby', 'dog_gerda'].map((k, i) => `<img class="spr" style="animation-delay:${i * .12}s" src="${SPRU[k]}" alt="">`).join('') : sprImg('hero', 'tk-sad')}</div>
+      <div class="modal-row"><button class="pbtn big" data-tk="${win ? 'next' : 'again'}" style="--c:var(--good)">${sprImg(win ? 'i_play' : 'i_reset')}<span>${win ? 'Дальше' : 'Ещё'}</span></button><button class="pbtn big" data-tk="home" style="--c:var(--cape)" aria-label="Домой">${sprImg('i_home')}</button></div>`;
+    ov.hidden = false;
+    say(win ? (TK.L < 10 ? [T.tankWin, T.lvlUp] : T.tankWin) : phrase);
+  }, win ? 900 : 1100);
+}
+function tkLoop(ts) {
+  if (!TK.on) return;
+  const dt = Math.min(.05, (ts - (TK.last || ts)) / 1000); TK.last = ts;
+  if (TK.state === 'play') tkUpdate(dt);
+  else TK.booms = TK.booms.filter(o => (o.t += dt) < (o.big ? .5 : .22));
+  tkDraw(ts);
+  TK.raf = requestAnimationFrame(tkLoop);
+}
+function tkSteelTex() {
+  if (TEX.steel) return TEX.steel.cv;
+  const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d');
+  g.fillStyle = '#9ea4b2'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#d9dee8'; g.fillRect(0, 0, 16, 2); g.fillRect(0, 0, 2, 16);
+  g.fillStyle = '#5f6474'; g.fillRect(0, 14, 16, 2); g.fillRect(14, 0, 2, 16); g.fillStyle = '#eef1f6'; g.fillRect(5, 5, 6, 6); g.fillStyle = '#7d8392'; g.fillRect(7, 7, 4, 4);
+  TEX.steel = { cv: c, url: c.toDataURL(), cols: ['#9ea4b2', '#d9dee8', '#5f6474'] };
+  return c;
+}
+function tkMapLayer() {
+  const s = TK.s, n = TK.side;
+  if (!TK.mapCv) { TK.mapCv = document.createElement('canvas'); TK.bushCv = document.createElement('canvas'); }
+  for (const c of [TK.mapCv, TK.bushCv]) { if (c.width !== n) { c.width = c.height = n; } }
+  const g = TK.mapCv.getContext('2d'), gb = TK.bushCv.getContext('2d');
+  g.imageSmoothingEnabled = gb.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, n, n); gb.clearRect(0, 0, n, n);
+  const steel = tkSteelTex();
+  for (let y = 0; y < TN; y++) for (let x = 0; x < TN; x++) {
+    const v = TK.g[y * TN + x]; if (!v) continue;
+    if (v === 1) { g.drawImage(TEX.brick.cv, (x & 1) * 8, (y & 1) * 8, 8, 8, x * s, y * s, s, s); }
+    else if (v === 2) g.drawImage(steel, (x & 1) * 8, (y & 1) * 8, 8, 8, x * s, y * s, s, s);
+    else if (v === 3) gb.drawImage(TEX.leaves.cv, (x & 1) * 8, (y & 1) * 8, 8, 8, x * s, y * s, s, s);
+  }
+  if (TK.g[TK_CHEST[1] * TN + TK_CHEST[0]] === 4) g.drawImage(SPRC.chest, TK_CHEST[0] * s, TK_CHEST[1] * s, 2 * s, 2 * s);
+  TK.dirty = false;
+}
+function tkDrawTank(g, t, spr, ts) {
+  const s = TK.s, cx = (t.x + 1) * s, cy = (t.y + 1) * s;
+  if (t.spawn > 0) {   // искры появления
+    const k = Math.floor(ts / 90) % 2, r = s * (k ? .9 : .55);
+    g.fillStyle = k ? '#ffffff' : '#ffc62e';
+    g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * .35 : r; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.fill();
+    return;
+  }
+  const frame = Math.floor(t.anim * 10) % 2 ? spr + '2' : spr;
+  const shake = (TK.freeze > 0 && t !== TK.p) || t.flash > 0 ? Math.sin(ts / 25) * s * .08 : 0;
+  g.save(); g.translate(cx + shake, cy); g.rotate(t.dir * Math.PI / 2);
+  g.drawImage(SPRC[frame] || SPRC[spr], -s, -s, 2 * s, 2 * s);
+  g.restore();
+  if (t.ch) {
+    const ps = s * 1.25;
+    g.fillStyle = t.flash > 0 ? '#ffc62e' : '#fff4d6'; g.strokeStyle = '#1b1530'; g.lineWidth = Math.max(2, s * .1);
+    g.fillRect(cx - ps / 2 + shake, cy - ps / 2, ps, ps); g.strokeRect(cx - ps / 2 + shake, cy - ps / 2, ps, ps);
+    g.fillStyle = '#1b1530'; g.font = `800 ${Math.round(s * 1.05)}px Rubik, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(t.ch, cx + shake, cy + s * .06);
+    if (TK.freeze > 0) { g.fillStyle = 'rgba(159,208,255,.35)'; g.fillRect(cx - s, cy - s, 2 * s, 2 * s); }
+  }
+  if (t.shield > 0 && Math.floor(ts / 80) % 2) { g.strokeStyle = '#9ffcf6'; g.lineWidth = Math.max(2, s * .15); g.beginPath(); g.arc(cx, cy, s * 1.25, 0, Math.PI * 2); g.stroke(); }
+}
+function tkDraw(ts) {
+  const cv = $('#tk-cv'); if (!cv || !TK.s) return;
+  const g = cv.getContext('2d'), s = TK.s, n = TK.side;
+  g.setTransform(TK.dpr, 0, 0, TK.dpr, 0, 0); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#17122a'; g.fillRect(0, 0, n, n);
+  g.fillStyle = 'rgba(255,255,255,.07)'; for (let y = 1; y < 13; y++) for (let x = 1; x < 13; x++) g.fillRect(x * 2 * s - 1, y * 2 * s - 1, 2, 2);
+  if (TK.dirty || !TK.mapCv || TK.mapCv.width !== n) tkMapLayer();
+  g.drawImage(TK.mapCv, 0, 0);
+  if (TK.guard > 0 && TK.guard < 3 && Math.floor(ts / 150) % 2) { g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(10 * s, 22 * s, 6 * s, 4 * s); }
+  if (TK.pu && (TK.pu.t > 3 || Math.floor(ts / 120) % 2)) {
+    const { x, y, kind } = TK.pu, spr = kind === 'baby' ? 'rattle' : PETS[kind].spr, c = SPRC[spr];
+    g.fillStyle = 'rgba(255,198,46,.9)'; g.fillRect(x * s - 2, y * s - 2, 2 * s + 4, 2 * s + 4);
+    g.fillStyle = '#fff4d6'; g.fillRect(x * s + 1, y * s + 1, 2 * s - 2, 2 * s - 2);
+    const k = Math.min((2 * s - 6) / c.width, (2 * s - 6) / c.height), w = c.width * k, h = c.height * k;
+    g.drawImage(c, x * s + s - w / 2, y * s + s - h / 2, w, h);
+  }
+  for (const t of TK.tanks) if (t.alive) tkDrawTank(g, t, 'tank_e', ts);
+  if (TK.p && TK.p.alive) tkDrawTank(g, TK.p, 'tank_p', ts);
+  for (const b of TK.bullets) { g.fillStyle = b.own === TK.p ? '#ffc62e' : '#ffffff'; g.fillRect(b.x * s - s * .28, b.y * s - s * .28, s * .56, s * .56); }
+  g.drawImage(TK.bushCv, 0, 0);
+  for (const o of TK.booms) {
+    const k = o.t / (o.big ? .5 : .22), r = s * (o.big ? 1.6 : .7) * (.4 + k);
+    g.fillStyle = `rgba(255,${Math.round(200 - 120 * k)},40,${1 - k})`; g.beginPath(); g.arc(o.x * s, o.y * s, r, 0, Math.PI * 2); g.fill();
+    g.fillStyle = `rgba(255,255,255,${.8 * (1 - k)})`; g.beginPath(); g.arc(o.x * s, o.y * s, r * .45, 0, Math.PI * 2); g.fill();
+  }
+}
+function tkPad(e) {
+  const pad = $('#tk-pad'), r = pad.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), knob = $('.knob', pad);
+  if (Math.hypot(dx, dy) < r.width * .1) { TK.dir = -1; knob.style.translate = '0 0'; return; }
+  TK.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
+  const [ux, uy] = TK_DIRS[TK.dir]; knob.style.translate = `${ux * r.width * .22}px ${uy * r.width * .22}px`;
+}
+function tkBind() {
+  const pad = $('#tk-pad'), fire = $('#tk-fire');
+  pad.addEventListener('pointerdown', e => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } TK.padId = e.pointerId; tkPad(e); });
+  pad.addEventListener('pointermove', e => { if (e.pointerId === TK.padId) tkPad(e); });
+  const padUp = e => { if (e.pointerId !== TK.padId) return; TK.padId = null; TK.dir = -1; $('.knob', pad).style.translate = '0 0'; };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => pad.addEventListener(ev, padUp));
+  fire.addEventListener('pointerdown', e => { e.preventDefault(); try { fire.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } TK.fireId = e.pointerId; TK.firing = true; fire.classList.add('on'); });
+  const fireUp = e => { if (e.pointerId !== TK.fireId) return; TK.fireId = null; TK.firing = false; fire.classList.remove('on'); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => fire.addEventListener(ev, fireUp));
+  document.addEventListener('keydown', e => { if (CUR !== 'tanks') return; TK.keys[e.code] = true; if (/^Arrow|Space/.test(e.code)) e.preventDefault(); });
+  document.addEventListener('keyup', e => { TK.keys[e.code] = false; });
+  $('#tk-say').addEventListener('click', () => { Sfx.tap(); if (TK.target) say(P.tankFind(TK.target)); });
+  $('#tk-over').addEventListener('click', e => {
+    const b = e.target.closest('[data-tk]'); if (!b) return; Sfx.tap();
+    if (b.dataset.tk === 'home') goHome(); else tkNew(false);
+  });
+}
 
 /* ---------- heroes screen ---------- */
 function openHeroes() {
@@ -1629,6 +2114,7 @@ function renderParent() {
     <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы.</p>
     <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Есть чертежи (домик, башня, замок, ракета) — за первую постройку по чертежу +10 алмазов. Алмазы также открывают новых героев.</p>
     <p>Ошибки не наказываются: игра называет букву, на которую нажал ребёнок, а после второй ошибки подсвечивает нужную.</p>
+    <p>«Танчики»: подбивать можно только танки с нужной буквой (по другим снаряд отскакивает, а игра называет букву) и защищать сундук. Собаки и малыш Даниил — бонусы: Винни пугает танки, Элли даёт жизнь, Герда охраняет сундук, Даниил даёт щит. После победы уровень растёт (1–10).</p>
     <p>«Найди букву» и финальный бой усложняются сами: после трёх быстрых ответов подряд растёт уровень (больше блоков, похожие буквы, «найди все»), в бою — быстрее дроны и промах отнимает секунды. Если не получается — уровень снижается. Сейчас: найди букву — ${S.fl} из 8, бой — ${S.al} из 10.</p>
     <p>Лучше одна-две миссии в день, чем час подряд. Прогресс хранится в этом браузере на этом устройстве.</p>
   </section>`;
@@ -1660,7 +2146,11 @@ function renderParent() {
 /* ---------- home ---------- */
 let UPDATE_READY = false;
 function maybeReload() { if (UPDATE_READY && CUR === 'home' && !RUN) { try { location.reload(); } catch (e) { /* ignore */ } } }
-function goHome() { endRun(); closeModal(); show('home'); applyNames(); maybeReload(); }
+function goHome() {
+  endRun(); closeModal(); show('home'); applyNames(); maybeReload();
+  setTimeout(petsHop, 250);
+  if (!S.petsSeen) { S.petsSeen = 1; save(); setTimeout(() => { if (CUR === 'home') say(T.petsHello); }, 700); }
+}
 let heroFrame = 0;
 function animHero() { heroFrame ^= 1; const im = $('#home-hero-img'); if (!im || CUR !== 'home') return; const k = heroKey(); im.src = SPRU[k === 'hero' && heroFrame ? 'hero2' : k]; }
 
@@ -1677,7 +2167,8 @@ function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) Voice.stop(); });
   window.addEventListener('resize', () => {
     FX.resize(); fitLogo(); if (curFit) curFit(); if (TR) TR.layout();
-    if (CUR === 'build') { bLayout(); bReq(); }
+    if (CUR === 'build') { bLayout(); bReq(); bDogs(); }
+    if (CUR === 'tanks') tkLayout();
   });
 
   $('#btn-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
@@ -1688,7 +2179,7 @@ function boot() {
   $('#peek').addEventListener('click', () => { Sfx.bad(); say(T.villain, { pitch: .55, rate: 1.05 }); });
   $$('[data-go]').forEach(b => b.addEventListener('click', () => {
     Sfx.tap(); const g = b.dataset.go;
-    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'build') openBuild(); else if (g === 'heroes') openHeroes();
+    if (g === 'abc') openABC('abc'); else if (g === 'write') openABC('write'); else if (g === 'tir') startTir(); else if (g === 'build') openBuild(); else if (g === 'heroes') openHeroes(); else if (g === 'tanks') openTanks();
   }));
   $('#btn-parent').addEventListener('click', () => { Sfx.tap(); openGate(); });
   $$('[data-home]').forEach(b => b.addEventListener('click', () => { Sfx.tap(); goHome(); }));
@@ -1717,7 +2208,12 @@ function boot() {
   const bcv = $('#build-cv');
   bcv.addEventListener('pointerdown', bDown); bcv.addEventListener('pointermove', bMove);
   bcv.addEventListener('pointerup', bUp); bcv.addEventListener('pointercancel', bUp); bcv.addEventListener('lostpointercapture', bUp);
-  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'build') { bLayout(); bReq(); } }).observe($('#build-stage'));
+  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'build') { bLayout(); bReq(); bDogs(); } }).observe($('#build-stage'));
+  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'tanks') tkLayout(); }).observe($('#tk-arena'));
+  tkBind();
+  $('#pets').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
+  $('#bdogs').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
+  $('#scr-reward').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
   onVoices = () => { if (CUR === 'parent' && S.sysVoice && !$('#p-voice') && TTS.ruVoices().length) renderParent(); };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLogo).catch(() => {});
   if (PWA && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -1726,7 +2222,7 @@ function boot() {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* ignore */ }
   }
-  window.__game = { S: () => S, LET, STROKES, BP, HEROES, BLOCKS, WW, WH, BV, lv, unlocked, allPhrases, wallet, usedBlocks, bpProgress, get RUN() { return RUN; }, get TR() { return TR; }, save };
+  window.__game = { S: () => S, LET, STROKES, BP, HEROES, BLOCKS, WW, WH, BV, TK, PETS, lv, unlocked, allPhrases, wallet, usedBlocks, bpProgress, get RUN() { return RUN; }, get TR() { return TR; }, save };
 }
 const startApp = () => { try { boot(); } catch (e) { console.error(e); } };
 if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(startApp); else startApp();

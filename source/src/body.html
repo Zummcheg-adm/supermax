@@ -24,9 +24,16 @@
             <button class="pbtn tile" data-go="tir" style="--c:var(--hero)"><img class="spr" data-spr="i_target" alt=""><span>Тир</span></button>
             <button class="pbtn tile" data-go="build" style="--c:var(--glitch)"><img class="spr" data-spr="i_castle" alt=""><span>Стройка</span></button>
             <button class="pbtn tile" id="tile-heroes" data-go="heroes" style="--c:var(--cape)"><img class="spr" data-spr="i_crown" alt=""><span>Герои</span><i class="badge">!</i></button>
+            <button class="pbtn tile" data-go="tanks" style="--c:var(--good)"><img class="spr" data-spr="i_tank" alt=""><span>Танчики</span></button>
           </div>
         </div>
       </div>
+    </div>
+    <div class="pets" id="pets">
+      <button class="pet p-vinni" data-pet="vinni" aria-label="Винни"><img class="spr" data-spr="dog_vinni" alt=""></button>
+      <button class="pet p-elli" data-pet="elli" aria-label="Элли"><img class="spr" data-spr="dog_elli" alt=""></button>
+      <button class="pet p-baby" data-pet="baby" aria-label="Даниил"><img class="spr" data-spr="baby" alt=""></button>
+      <button class="pet p-gerda" data-pet="gerda" aria-label="Герда"><img class="spr kennel" data-spr="kennel" alt=""><img class="spr" data-spr="dog_gerda" alt=""></button>
     </div>
     <button class="peek" id="peek" aria-label="Глюк"><img class="spr glitchy" data-spr="glitch" alt=""></button>
   </section>
@@ -47,7 +54,9 @@
     <div class="rw">
       <div class="rw-title" id="rw-title">ПОБЕДА!</div>
       <div class="rw-scene">
+        <button class="rw-dog" data-pet="vinni" aria-label="Винни"><img class="spr" data-spr="dog_vinni" alt=""></button>
         <img class="spr rw-hero float" data-spr="hero" alt="">
+        <button class="rw-dog d2" data-pet="elli" aria-label="Элли"><img class="spr" data-spr="dog_elli" alt=""></button>
         <div class="rw-gems"><img class="spr" data-spr="gem" alt=""><b id="rw-n">+0</b></div>
         <img class="spr rw-glitch" data-spr="glitch" alt="">
       </div>
@@ -70,8 +79,27 @@
       <button class="pbtn sm pulse" id="build-play" aria-label="Играть" style="--c:var(--hero)" hidden><img class="spr" data-spr="i_play" alt=""></button>
       <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
     </div>
-    <div class="build-stage" id="build-stage"><canvas id="build-cv"></canvas></div>
+    <div class="build-stage" id="build-stage"><canvas id="build-cv"></canvas><div class="bdogs" id="bdogs"></div></div>
     <div class="hotbar" id="hotbar"></div>
+  </section>
+
+  <!-- TANKS -->
+  <section id="scr-tanks" class="screen" hidden>
+    <div class="hud">
+      <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
+      <div class="tk-top">
+        <div class="bubble tk-target"><span class="ptext">Подбей</span><span class="tgt" id="tk-letter">А</span><button class="pbtn" id="tk-say" aria-label="Повторить" style="--c:var(--cape)"><img class="spr" data-spr="i_sound" alt=""></button></div>
+        <div class="stars" id="tk-stars"></div>
+        <div class="tk-lives" id="tk-lives"></div>
+        <div class="lvl" id="tk-lvl">УР. 1</div>
+      </div>
+      <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
+    </div>
+    <div class="tk-stage">
+      <div class="tk-pad" id="tk-pad" aria-label="Руль"><i class="ar u"></i><i class="ar r"></i><i class="ar d"></i><i class="ar l"></i><i class="knob"></i></div>
+      <div class="tk-arena" id="tk-arena"><canvas id="tk-cv"></canvas><div class="tk-over" id="tk-over" hidden></div></div>
+      <button class="tk-fire" id="tk-fire" aria-label="Огонь"><img class="spr" data-spr="i_target" alt=""></button>
+    </div>
   </section>
 
   <!-- ABC / WRITE -->

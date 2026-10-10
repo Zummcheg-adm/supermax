@@ -605,6 +605,12 @@ SPR['i_plan'] = [
 ]
 
 
+from sprites_pets import PAL_ADD as _PA, SPR as _SP  # собаки, малыш, танки
+assert not (set(_PA) & set(PAL)), set(_PA) & set(PAL)
+PAL.update(_PA)
+SPR.update(_SP)
+
+
 def render(name, scale=12):
     from PIL import Image
     rows = SPR[name]
