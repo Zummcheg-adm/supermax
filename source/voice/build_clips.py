@@ -4,6 +4,8 @@ sys.path.insert(0, '/home/claude/tts')
 from synth import synth
 
 phrases = json.load(open('/home/claude/tts/phrases.json', encoding='utf-8'))
+SAYAS = json.load(open('/home/claude/tts/sayas.json', encoding='utf-8')) if os.path.exists('/home/claude/tts/sayas.json') else {}
+ONLY = set(json.load(open(os.environ['ONLY'], encoding='utf-8'))) if os.environ.get('ONLY') else None
 import re
 NAMES = sorted([n for n in json.load(open('/home/claude/tts/names.json', encoding='utf-8')) if 'знак' not in n], key=len, reverse=True)
 _nr = '|'.join(re.escape(n) for n in NAMES)
@@ -21,6 +23,17 @@ def read_pcm(path):
 
 from vowels import vowel_wav, PURE, IOT
 from cv import cv_wav, CV_NAMES
+CV_RE = re.compile(r'^[бвгджзклмнпрстфхцчшщ][аоуыиэея]$')
+DRAWN_RE = re.compile(r'^([бвгджзклмнпрстфхцчшщ])\1\1-([аоуыиэея])\2$')
+ords = lambda t: '_'.join(str(ord(ch)) for ch in t)
+
+
+def firm_syllable(core, drawn=False):
+    """Firm open syllable «ма», «лу»… (and its drawn-out twin «ммм-аа») from the best of several takes."""
+    tp, dp = f'/home/claude/tts/cv/c_{ords(core)}.wav', f'/home/claude/tts/cv/d_{ords(core)}.wav'
+    if not os.path.exists(tp) or (drawn and not os.path.exists(dp)):
+        os.makedirs('/home/claude/tts/cv', exist_ok=True); cv_wav(core, tp, n=3, drawn_out=dp)
+    return dp if drawn else tp
 
 
 def seg(text, speed):
@@ -96,14 +109,25 @@ for k, text in enumerate(phrases):
     wavp = f'/home/claude/tts/wav/{key}.wav'
     mp3p = f'/home/claude/tts/mp3/{key}.mp3'
     if not os.path.exists(mp3p):
-        clean = text.replace('«', '').replace('»', '')
+        clean = SAYAS.get(text, text).replace('«', '').replace('»', '')
+        core = clean.strip('!.?, ').lower()
+        if ONLY is not None and text not in ONLY:
+            raise SystemExit(f'not in ONLY and no mp3: {text}')
         if text in VILLAIN:
             if not os.path.exists(wavp): synth(clean, wavp, 'ruslan', speed=0.9)
             af = ('asetrate=22050*0.8,aresample=22050,atempo=1.25,aecho=0.8:0.6:45:0.25,'
                   'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse')
         else:
             parts = split_parts(clean)
-            if parts:
+            m = DRAWN_RE.match(core)
+            if m:
+                wavp = firm_syllable(m.group(1) + m.group(2), drawn=True)
+            elif CV_RE.match(core):
+                wavp = firm_syllable(core)
+            elif len(core) == 1 and core in (PURE | IOT):
+                wavp = f'/home/claude/tts/vow/v_{ord(core)}.wav'
+                if not os.path.exists(wavp): vowel_wav(core, wavp)
+            elif parts:
                 wavp = f'/home/claude/tts/wav2/{key}.wav'
                 synth_split(parts, wavp)
             elif not os.path.exists(wavp): synth(clean, wavp, 'irina', speed=1.10, noise=0.75)

@@ -259,7 +259,7 @@ const HEROES = [
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, tank: 1, tankSeen: 0, petsSeen: 0, plot: 0, worlds: null, res: null, night: false, btab: 0, lastBlock: 'planks', resSeen: 0, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, tank: 1, tankSeen: 0, petsSeen: 0, plot: 0, worlds: null, res: null, night: false, btab: 0, lastBlock: 'planks', resSeen: 0, rl: 1, nl: 3, rlS: 0, rlB: 0, nlS: 0, nlB: 0, rx: {}, opSeen: '', mix: true, lowerTouched: false, readSeen: 0, numSeen: 0, rMis: 0, nMis: 0, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
@@ -277,6 +277,9 @@ function load() {
   if (!Array.isArray(S.bpDone)) S.bpDone = [];
   if (S.btool !== 'pick' && S.btool !== 'fill' && !String(S.btool).startsWith('fam:') && !BLOCKS.some(b => b.t === S.btool)) S.btool = 'planks';
   S.fl = clamp(Math.round(+S.fl) || 2, 1, 8); S.al = clamp(Math.round(+S.al) || 3, 1, 10); S.fs = Math.max(0, +S.fs || 0);
+  S.rl = clamp(Math.round(+S.rl) || 1, 1, 10); S.nl = clamp(Math.round(+S.nl) || 3, 1, 10);
+  if (!S.rx || typeof S.rx !== 'object' || Array.isArray(S.rx)) S.rx = {};
+  if (typeof S.opSeen !== 'string') S.opSeen = '';
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
 
@@ -538,9 +541,25 @@ const T = {
   tntHow: 'Динамит! Поставь его и нажми на него ещё раз. Будет бум!',
   fillTool: 'Рамка! Проведи пальцем, и всё внутри заполнится блоками.', fillShort: 'Рамка!',
   tanks: 'Танчики! Подбивай только танки с нужной буквой и береги сундук!',
+  tankSyl: 'Подбей танки со слогом', tankNum: 'Подбей танки с числом', tankSum: 'Подбей танки с правильным ответом!',
   tankHit: 'Ой! Наш танк подбит!', tankLost: 'Танки закончились. Давай ещё раз!', chestLost: 'Сундук разбит! Давай ещё раз!',
   tankWin: 'Победа! Танковый бой выигран!',
   puVinni: 'Винни гавкнул, и танки замерли!', puElli: 'Элли принесла ещё одну жизнь!', puGerda: 'Герда охраняет сундук!', puBaby: 'Малыш Даниил дал тебе щит!',
+  readGo: 'Глюк перепутал все слоги! Читаем!', numGo: 'Глюк перепутал все числа! Считаем!',
+  blend: 'Смотри: буква бежит к букве!', sylRunQ: 'Послушай и помоги букве добежать!',
+  findSyl: 'Найди слог', needSyl: 'А нам нужен слог', catchSyl: 'Лови слог', itsWritten: 'Тут написано:',
+  sylPicQ: 'Прочитай слог и найди картинку!', wordPicQ: 'Прочитай слово и найди картинку!',
+  findWord: 'Найди слово', buildQ: 'Собери слово', bySyl: 'Читаем по слогам:', readAgain: 'Прочитай ещё раз!',
+  yesNoQ: 'Прочитай и ответь: да или нет?', storyQ: 'Прочитай и найди ответ!', yes: 'Да!', no: 'Нет!',
+  countQ: 'Сколько здесь? Посчитай!', countTensQ: 'Сколько здесь кубиков? Считай десятками!',
+  findNum: 'Найди число', needNum: 'А нам нужно число', missQ: 'Какое число пропущено?',
+  moreQ: 'Где больше?', lessQ: 'Где меньше?', sumQ: 'Сколько будет?', missOpQ: 'Какое число спряталось?',
+  plusIs: 'Плюс — значит, сложить вместе!', minusIs: 'Минус — значит, убрать!',
+  bondQ: 'Состав числа! Какое число спряталось в окошке?', bondHint: 'Сколько не хватает?',
+  countTogether: 'Давай посчитаем вместе!', tryAgain: 'Попробуй ещё раз!',
+  catchNum: 'Лови число', catchAns: 'Лови правильный ответ!',
+  readWin: 'Ты читаешь всё лучше и лучше!', numWin: 'Ты считаешь как настоящий супергерой!',
+  lowerOn: 'Теперь будут и маленькие буквы!',
   heroes: 'Это твои герои! Выбери, кем ты будешь.',
   newHero: 'Ура! Новый герой!',
   needMore: 'Собери ещё алмазов в миссиях!',
@@ -594,6 +613,7 @@ function allPhrases() {
   BLOCKS.forEach(b => out.add(P.block(b)));
   PLOTS.forEach(p => out.add(p.say));
   HEROES.forEach(h => out.add(P.heroNow(h)));
+  learnPhrases(out);
   Object.assign(S, keep);
   return [...out];
 }
@@ -721,13 +741,13 @@ function closeModal() { $('#modal').hidden = true; MODAL_CB = null; }
 
 /* ---------- runs (missions / free modes) ---------- */
 let RUN = null, TR = null, curFit = null;
-function newRun(kind) { endRun(); const run = RUN = { kind, alive: true, earned: 0, before: {}, tasks: [], i: 0, prompt: null }; ALPHA.forEach(c => { run.before[c] = lv(c); }); return run; }
+function newRun(kind) { endRun(); const run = RUN = { kind, alive: true, earned: 0, before: {}, tasks: [], i: 0, prompt: null, recent: [], items: [] }; ALPHA.forEach(c => { run.before[c] = lv(c); }); return run; }
 function endRun() { if (RUN) RUN.alive = false; RUN = null; Voice.stop(); curFit = null; if (TR) { TR.destroy(); TR = null; } buildStop(); tkStop(); clearHelpers(); }
 async function rs(run, text, o) { if (!run.alive) throw STOP; await say(text, o); if (!run.alive) throw STOP; }
 async function rsPick(run, list) { if (!run.alive) throw STOP; await sayPick(list); if (!run.alive) throw STOP; }
 async function rsleep(run, ms) { if (!run.alive) throw STOP; await sleep(ms); if (!run.alive) throw STOP; }
 const stageEl = () => $('#stage');
-function setStage(html) { clearHelpers(); const st = stageEl(); curFit = null; st.innerHTML = html; st.dataset.ti = RUN && RUN.i != null ? RUN.i : ''; applySprites(st); return st.firstElementChild; }
+function setStage(html) { clearHelpers(); window.__target = undefined; const st = stageEl(); curFit = null; st.innerHTML = html; st.dataset.ti = RUN && RUN.i != null ? RUN.i : ''; applySprites(st); return st.firstElementChild; }
 function waitClick(el) { return new Promise(r => el.addEventListener('click', () => { Sfx.tap(); r(); }, { once: true })); }
 
 function promptHTML(text, extra = '', tools = '') {
@@ -735,7 +755,8 @@ function promptHTML(text, extra = '', tools = '') {
 }
 function blockHTML(ch, low, tex) {
   const t = tex || pick(BLOCK_TEX);
-  return `<button class="lb" data-c="${ch}" data-tex="${t}" style="--tex:url(${TEX[t].url})" aria-label="${ch}"><span class="face"><span>${low ? ch.toLowerCase() : ch}</span></span></button>`;
+  const w = ch.length > 1 ? ` w${Math.min(4, ch.length)}` : '';
+  return `<button class="lb${w}" data-c="${ch}" data-tex="${t}" style="--tex:url(${TEX[t].url})" aria-label="${ch}"><span class="face"><span>${low ? ch.toLowerCase() : ch}</span></span></button>`;
 }
 function emoHTML(w) { return w.e.charAt(0) === '#' ? `<span class="emo"><img class="spr" src="${SPRU[w.e.slice(1)]}" alt=""></span>` : `<span class="emo">${w.e}</span>`; }
 function wordHTML(w, c, hide) {
@@ -780,9 +801,10 @@ async function breakBlock(b) {
 
 function choiceRound(run, o) {
   return new Promise(resolve => {
-    const box = o.box, texs = shuffle(BLOCK_TEX), need = o.count || 1, t0 = performance.now();
-    box.innerHTML = o.letters.map((ch, i) => blockHTML(ch, o.low, texs[i % texs.length])).join('');
-    curFit = () => fitOpts(box, o.letters.length, o.maxBs || 200); curFit();
+    const box = o.box, texs = shuffle(BLOCK_TEX), need = o.count || 1, t0 = performance.now(), sel = o.sel || '.lb', hintAt = o.hintAt || 2;
+    box.innerHTML = o.letters.map((ch, i) => o.render ? o.render(ch, i) : blockHTML(ch, o.low, texs[i % texs.length])).join('');
+    curFit = o.fit === false ? null : () => fitOpts(box, o.letters.length, o.maxBs || 200); if (curFit) curFit();
+    window.__target = o.target;   // for automated tests
     const sp = o.speed;
     if (sp && o.fast) { sp.hidden = false; sp.style.setProperty('--d', o.fast + 'ms'); sp.firstElementChild.addEventListener('animationend', () => sp.classList.add('over'), { once: true }); }
     let wrong = 0, found = 0, done = false, lastAct = Date.now(), nags = 0;
@@ -792,15 +814,15 @@ function choiceRound(run, o) {
     }, 1000);
     box.addEventListener('click', async e => {
       lastAct = Date.now();
-      const b = e.target.closest('.lb'); if (!b || done || !run.alive || b.classList.contains('dead') || b.dataset.hit) return;
+      const b = e.target.closest(sel); if (!b || !box.contains(b) || done || !run.alive || b.classList.contains('dead') || b.dataset.hit) return;
       const ch = b.dataset.c;
       if (ch === o.target) {
         b.dataset.hit = '1'; found++;
         const last = found >= need, ms = performance.now() - t0;
         const fast = last && !!o.fast && wrong === 0 && ms <= o.fast;
-        if (last) { done = true; clearInterval(idle); $$('.lb', box).forEach(x => x.classList.remove('hint')); if (sp) sp.classList.add(fast ? 'win' : 'stop'); }
+        if (last) { done = true; clearInterval(idle); $$(sel, box).forEach(x => x.classList.remove('hint')); if (sp) sp.classList.add(fast ? 'win' : 'stop'); }
         if (o.onHit) o.onHit(found, need);
-        await breakBlock(b);
+        await (o.good ? o.good(b) : breakBlock(b));
         addGems(fast ? 2 : 1, b); run.earned += fast ? 2 : 1;
         if (fast) { const [x, y] = FX.center(b); FX.burst(x, y - 70, 'БЫСТРО!', { fs: 38, bt: 'var(--gem)' }); setTimeout(() => Sfx.ding(), 250); }
         if (last) resolve({ first: wrong === 0, wrong, fast, ms });
@@ -808,12 +830,14 @@ function choiceRound(run, o) {
         wrong++; Sfx.bad(); b.classList.add('shake'); setTimeout(() => b.classList.add('dead'), 400);
         if (sp && !sp.classList.contains('over')) sp.classList.add('stop');
         let dog = null;
-        if (wrong >= 2) {
-          const left = $$(`.lb[data-c="${o.target}"]`, box).filter(t => !t.dataset.hit);
+        if (wrong >= hintAt) {
+          const left = $$(sel, box).filter(t => t.dataset.c === o.target && !t.dataset.hit);
           left.forEach(t => t.classList.add('hint'));
-          if (wrong === 2 && left[0]) dog = dogHelp(left[0]);
+          if (wrong === hintAt && left[0] && o.dog !== false) dog = dogHelp(left[0]);
         }
-        say(o.wrongSay ? o.wrongSay(ch, wrong) : [P.thisIs(ch), ...(dog ? [dog.found()] : []), wrong >= 2 ? P.here(o.target) : P.need(o.target)]);
+        const ph = o.wrongSay ? o.wrongSay(ch, wrong, dog) : [P.thisIs(ch), ...(dog ? [dog.found()] : []), wrong >= 2 ? P.here(o.target) : P.need(o.target)];
+        if (ph) say(ph);
+        if (o.onWrong) o.onWrong(ch, wrong, b);
       }
     });
   });
@@ -983,10 +1007,12 @@ function arcadeRound(run, target, o = {}) {
   const A = arcParams(o.boss), need = A.need, T = A.time;
   const pool = (o.pool || unlocked()).filter(x => x !== target);
   const others = pool.length >= 2 ? pool : ALPHA.filter(x => x !== target && !(SIMILAR[target] || []).includes(x));
-  const look = A.sim ? (SIMILAR[target] || []).filter(x => x !== target) : [];
-  const root = setStage(`<div class="task arcade"><div class="arc-top">${promptHTML(isSign(target) ? 'Лови' : 'Лови букву', `<span class="tgt">${target}</span>`)}<div class="lvl">УР. ${A.lvl}</div><div class="timer"><i></i></div><div class="stars">${Array.from({ length: need }, () => sprImg('star')).join('')}</div></div><div class="arena" style="--ds:${A.scale}"><svg class="zaps"></svg>${sprImg('hero', 'arc-hero')}</div></div>`);
+  const look = A.sim ? (o.look || SIMILAR[target] || []).filter(x => x !== target) : [];
+  const label = o.label || (isSign(target) ? 'Лови' : 'Лови букву'), shown = o.tgt || (o.low ? target.toLowerCase() : target);
+  const root = setStage(`<div class="task arcade"><div class="arc-top">${promptHTML(label, `<span class="tgt">${esc(shown)}</span>`)}<div class="lvl">УР. ${A.lvl}</div><div class="timer"><i></i></div><div class="stars">${Array.from({ length: need }, () => sprImg('star')).join('')}</div></div><div class="arena" style="--ds:${A.scale}"><svg class="zaps"></svg>${sprImg('hero', 'arc-hero')}</div></div>`);
   const arena = $('.arena', root), svg = $('.zaps', root), bar = $('.timer i', root), stars = $$('.stars img', root), hero = $('.arc-hero', root);
-  run.prompt = () => say(P.catchIt(target));
+  run.prompt = () => say(o.sayIt ? o.sayIt() : P.catchIt(target));
+  window.__target = target;
   return new Promise(resolve => {
     let hits = 0, miss = 0, combo = 0, el = 0, last = 0, spawnT = .2, lastTarget = -9, alive = true, raf = 0, nagT = 0;
     const drones = [];
@@ -995,7 +1021,7 @@ function arcadeRound(run, target, o = {}) {
     function spawn(isT) {
       const ch = isT ? target : (look.length && Math.random() < .35 ? pick(look) : pick(others));
       const d = document.createElement('div'); d.className = 'drone';
-      const tex = pick(BLOCK_TEX); d.innerHTML = blockHTML(ch, false, tex);
+      const tex = pick(BLOCK_TEX); d.innerHTML = blockHTML(ch, o.low, tex);
       arena.append(d);
       const size = d.offsetWidth || 100, fromLeft = Math.random() < .5;
       const o2 = { el: d, ch, tex, size, x: fromLeft ? -size - 10 : W() + 10, y0: rnd(H() * .1, Math.max(H() * .1 + 1, H() - size - 30)), vx: (fromLeft ? 1 : -1) * rnd(A.vmin, A.vmax) * Math.max(W(), 500), ph: rnd(0, 6.3), amp: rnd(8, 24) * A.amp, dead: false };
@@ -1050,7 +1076,7 @@ function arcadeRound(run, target, o = {}) {
         miss++; combo = 0;
         Sfx.bad(); d.el.classList.remove('nope'); void d.el.offsetWidth; d.el.classList.add('nope');
         if (A.penalty) { el += A.penalty; FX.burst(cx, cy - 40, `−${A.penalty}`, { fs: 34, bt: 'var(--hero)', rot: 0 }); }
-        if (!Voice.busy) say(P.thisIs(d.ch));
+        if (!Voice.busy) say(o.sayThis ? o.sayThis(d.ch) : P.thisIs(d.ch));
       }
     }
     function stopAll() { alive = false; cancelAnimationFrame(raf); drones.forEach(d => d.el.remove()); }
@@ -1070,6 +1096,8 @@ async function tArcade(t, run) {
 }
 
 const TASKS = { intro: tIntro, match: tMatch, find: tFind, pic: tPic, trace: tTrace, arcade: tArcade };
+
+/*LEARN*/
 
 /* ---------- mission planning ---------- */
 function pickLetter(pool, avoid, fresh) {
@@ -1104,9 +1132,15 @@ function planMission() {
   }
   const weak = pool.slice().sort((a, b) => S.L[a].sc - S.L[b].sc);
   tasks.push({ t: 'arcade', c: pick(weak.slice(0, Math.min(3, weak.length))) });
-  return tasks;
+  return mixTasks(tasks);
 }
 
+// маленькие буквы включаются сами, когда большие уже узнаются (если родители не выключили)
+function autoLower() {
+  if (S.lower || S.lowerTouched) return false;
+  if (ALPHA.filter(c => S.L[c].u && lv(c) >= 2).length < 15) return false;
+  S.lower = true; save(); return true;
+}
 function renderHP(run) { $('#hp').innerHTML = run.tasks.map(() => '<i></i>').join(''); }
 function hitBoss(run) {
   const segs = $$('#hp i'); const s = segs[run.i]; if (s) s.classList.add('off');
@@ -1115,13 +1149,15 @@ function hitBoss(run) {
 
 async function startMission() {
   closeModal();
-  const run = newRun('mission');
+  const run = newRun('mission'); LAST_KIND = 'mission';
+  const lowNews = autoLower();
   run.tasks = planMission();
   show('game'); $('#boss').hidden = false; $('#free-title').hidden = true;
   renderHP(run);
   try {
     if (S.missions === 0) await rsPick(run, [S.name ? N.hello() : T.hello0, T.hello0]);
     else await rsPick(run, [pick([T.again1, T.again2, N.fight()]), T.again2]);
+    if (lowNews) await rs(run, T.lowerOn);
     for (run.i = 0; run.i < run.tasks.length; run.i++) {
       const t = run.tasks[run.i];
       if (t.t === 'arcade') { setStage(`<div class="task splash"><div class="banner">ФИНАЛЬНЫЙ БОЙ!</div>${sprImg('glitch', 'boss-big glitchy')}</div>`); Sfx.boom(); await rs(run, T.final); }
@@ -1143,7 +1179,7 @@ function slotHTML(c, up) {
 async function finishMission(run) {
   S.missions++; save();
   show('reward');
-  const practiced = [...new Set(run.tasks.map(t => t.c))];
+  const practiced = [...new Set(run.tasks.map(t => t.c).filter(c => c && LET[c]))];
   const ups = practiced.filter(c => lv(c) > (run.before[c] || 0));
   $('#rw-n').textContent = '+' + run.earned;
   $('#rw-title').textContent = pick(['ПОБЕДА!', 'УРА!', 'СУПЕР!']);
@@ -1945,10 +1981,26 @@ function tkCfg(L) {
   return { need: 4 + Math.floor(L / 2), maxOn: Math.min(6, 2 + Math.ceil(L / 3)), eSpeed: 2.4 + .22 * L, fire: .75 + .12 * L,
     pT: Math.max(.3, .5 - .02 * L), gap: Math.max(1.1, 3 - .18 * L), look: L >= 3, bSpeed: 8 + .4 * L };
 }
-function tkPickTarget() {
-  const pool = unlocked();
-  const weak = pool.slice().sort((a, b) => S.L[a].sc - S.L[b].sc);
-  return pick(weak.slice(0, Math.max(3, Math.ceil(weak.length / 2))));
+// цель раунда: буква, слог, число или пример (ответ ищем на танках)
+const TK_KINDS = ['letter', 'syl', 'letter', 'num', 'syl', 'sum'];
+function tkPickTarget(first) {
+  let kind = 'letter';
+  if (!first || S.tankSeen) { S.tkMode = ((S.tkMode || 0) + 1) % TK_KINDS.length; save(); kind = TK_KINDS[S.tkMode]; if (kind === 'sum' && S.nl < 3) kind = 'num'; }
+  if (kind === 'syl') {
+    const pool = rdSylPool(Math.max(S.rl, 2)), t = pick(pool), d = pool.filter(x => x !== t && !confusable(t, x));
+    return { kind, target: t, show: rdUp() ? t : t.toLowerCase(), decoys: d, look: d.filter(x => x[0] === t[0] || x[1] === t[1]), find: () => [T.tankSyl, sylKey(t)], it: ch => sylKey(ch) };
+  }
+  if (kind === 'num' || kind === 'sum') {
+    let n, show, find, extra = [];
+    if (kind === 'num') { const [lo, hi] = NM_RANGE[S.nl - 1]; n = ri(Math.max(lo, 1), hi); show = String(n); find = () => [T.tankNum, numKey(n)]; }
+    else { const ex = arithGen(Math.min(S.nl, 8)); n = ex.ans; show = `${ex.a}${opCh(ex.op)}${ex.b}`; find = () => T.tankSum; extra = [ex.a, ex.b, ex.a + ex.b, Math.abs(ex.a - ex.b)]; }
+    const d = numDecoys(n, 8, { min: 1, max: Math.max(20, n + 12), extra }).map(String);
+    return { kind, target: String(n), show, decoys: d, look: d.slice(0, 3), find, it: ch => numKey(ch) };
+  }
+  const pool = unlocked(), weak = pool.slice().sort((a, b) => S.L[a].sc - S.L[b].sc);
+  const c = pick(weak.slice(0, Math.max(3, Math.ceil(weak.length / 2)))), d = pool.filter(x => x !== c);
+  return { kind, target: c, show: c, decoys: d.length >= 2 ? d : ALPHA.filter(x => x !== c && !(SIMILAR[c] || []).includes(x)), look: (SIMILAR[c] || []).filter(x => x !== c),
+    find: () => P.tankFind(c), it: ch => P.thisIs(ch), hit: () => P.nomEx(c) };
 }
 function openTanks() {
   if (needFirstMission()) return;
@@ -1957,26 +2009,25 @@ function openTanks() {
 }
 function tkNew(first) {
   tkStop(); clearHelpers();
-  const L = clamp(S.tank || 1, 1, 10), cfg = tkCfg(L), target = tkPickTarget();
+  const L = clamp(S.tank || 1, 1, 10), cfg = tkCfg(L), pk = tkPickTarget(first), target = pk.target;
   const map = TK_MAPS[(L - 1) % TK_MAPS.length], g = new Uint8Array(TN * TN);
   map.forEach((row, ty) => { for (let tx = 0; tx < 13; tx++) { const ch = row[tx], v = ch === 'b' ? 1 : ch === 's' ? 2 : ch === 'g' ? 3 : 0; if (v) for (let k = 0; k < 4; k++) g[(ty * 2 + (k >> 1)) * TN + tx * 2 + (k & 1)] = v; } });
   for (let k = 0; k < 4; k++) g[(TK_CHEST[1] + (k >> 1)) * TN + TK_CHEST[0] + (k & 1)] = 4;
   TK_WALLS.forEach(i => { g[i] = 1; });
-  const pool = unlocked().filter(c => c !== target);
   Object.assign(TK, {
     L, cfg, target, g, dirty: true, tanks: [], bullets: [], booms: [], pu: null, puT: rnd(9, 14), got: 0, lives: 3,
     spawnT: .6, spawnK: 0, freeze: 0, guard: 0, state: 'play', endT: 0, last: 0, sayT: 0,
-    decoys: pool.length >= 2 ? pool : ALPHA.filter(c => c !== target && !(SIMILAR[target] || []).includes(c)),
-    look: cfg.look ? (SIMILAR[target] || []).filter(c => c !== target) : [],
+    pk, kind: pk.kind, decoys: pk.decoys, look: cfg.look ? pk.look : [],
   });
   TK.p = tkTank(TK_P0[0], TK_P0[1], null); TK.p.speed = 5; TK.p.shield = 3; TK.p.max = 2;
   $('#tk-over').hidden = true;
-  $('#tk-letter').textContent = target;
+  $('#tk-letter').textContent = pk.show;
+  $('#tk-letter').classList.toggle('long', pk.show.length > 2);
   $('#tk-lvl').textContent = `УР. ${L}`;
   tkHud();
   TK.on = true; tkLayout();
   TK.raf = requestAnimationFrame(tkLoop);
-  say(first && !S.tankSeen ? [T.tanks, P.tankFind(target)] : P.tankFind(target));
+  say(first && !S.tankSeen ? [T.tanks, ...[].concat(pk.find())] : pk.find());
   if (!S.tankSeen) { S.tankSeen = 1; save(); }
 }
 function tkStop() { TK.on = false; cancelAnimationFrame(TK.raf); TK.dir = -1; TK.firing = false; TK.padId = TK.fireId = null; const k = $('#tk-pad .knob'); if (k) k.style.translate = '0 0'; }
@@ -2069,14 +2120,14 @@ function tkHitTank(t, b) {
     t.alive = false; TK.got++; tkHud(); tkBoom(t.x + 1, t.y + 1, true); Sfx.boom(); Sfx.crack();
     FX.burst(cx, cy - 30, pick(['БАБАХ!', 'БУМ!', 'ТЫДЫЩ!', 'БАЦ!']), { fs: 34 });
     addGems(1, [cx, cy]);
-    boost(TK.target, 3);
-    if (!Voice.busy) say(P.nomEx(TK.target));
+    if (TK.kind === 'letter') boost(TK.target, 3); else rxRec(TK.target, true);
+    if (!Voice.busy) say(TK.pk.hit ? TK.pk.hit() : TK.pk.it(TK.target));
     if (TK.got >= TK.cfg.need) tkEnd(true);
     else if (TK.got === 2 || TK.got === 5) { const sp = tkPlaceSpot(); if (sp && !TK.pu) TK.pu = { x: sp[0], y: sp[1], kind: pick(['vinni', 'elli', 'gerda', 'baby']), t: 12 }; }
   } else {
     t.stun = .7; t.flash = .35; Sfx.ding();
     FX.burst(cx, cy - 30, 'ДЗЫНЬ!', { fs: 28, bt: 'var(--gem)' });
-    if (!Voice.busy || performance.now() - TK.sayT > 2500) { TK.sayT = performance.now(); say(P.thisIs(t.ch)); }
+    if (!Voice.busy || performance.now() - TK.sayT > 2500) { TK.sayT = performance.now(); say(TK.pk.it(t.ch)); }
   }
 }
 function tkUpdate(dt) {
@@ -2234,11 +2285,11 @@ function tkDrawTank(g, t, spr, ts) {
   g.drawImage(SPRC[frame] || SPRC[spr], -s, -s, 2 * s, 2 * s);
   g.restore();
   if (t.ch) {
-    const ps = s * 1.25;
+    const n = t.ch.length, ps = s * 1.25, pw = ps * (n > 1 ? 1.35 : 1);
     g.fillStyle = t.flash > 0 ? '#ffc62e' : '#fff4d6'; g.strokeStyle = '#1b1530'; g.lineWidth = Math.max(2, s * .1);
-    g.fillRect(cx - ps / 2 + shake, cy - ps / 2, ps, ps); g.strokeRect(cx - ps / 2 + shake, cy - ps / 2, ps, ps);
-    g.fillStyle = '#1b1530'; g.font = `800 ${Math.round(s * 1.05)}px Rubik, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(t.ch, cx + shake, cy + s * .06);
+    g.fillRect(cx - pw / 2 + shake, cy - ps / 2, pw, ps); g.strokeRect(cx - pw / 2 + shake, cy - ps / 2, pw, ps);
+    g.fillStyle = '#1b1530'; g.font = `800 ${Math.round(s * (n > 2 ? .62 : n > 1 ? .82 : 1.05))}px Rubik, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(TK.kind === 'syl' && !rdUp() ? t.ch.toLowerCase() : t.ch, cx + shake, cy + s * .06);
     if (TK.freeze > 0) { g.fillStyle = 'rgba(159,208,255,.35)'; g.fillRect(cx - s, cy - s, 2 * s, 2 * s); }
   }
   if (t.shield > 0 && Math.floor(ts / 80) % 2) { g.strokeStyle = '#9ffcf6'; g.lineWidth = Math.max(2, s * .15); g.beginPath(); g.arc(cx, cy, s * 1.25, 0, Math.PI * 2); g.stroke(); }
@@ -2287,7 +2338,7 @@ function tkBind() {
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => fire.addEventListener(ev, fireUp));
   document.addEventListener('keydown', e => { if (CUR !== 'tanks') return; TK.keys[e.code] = true; if (/^Arrow|Space/.test(e.code)) e.preventDefault(); });
   document.addEventListener('keyup', e => { TK.keys[e.code] = false; });
-  $('#tk-say').addEventListener('click', () => { Sfx.tap(); if (TK.target) say(P.tankFind(TK.target)); });
+  $('#tk-say').addEventListener('click', () => { Sfx.tap(); if (TK.pk) say(TK.pk.find()); });
   $('#tk-over').addEventListener('click', e => {
     const b = e.target.closest('[data-tk]'); if (!b) return; Sfx.tap();
     if (b.dataset.tk === 'home') goHome(); else tkNew(false);
@@ -2364,6 +2415,15 @@ function renderParent() {
     </div>
   </section>
   <section>
+    <h3>Чтение и счёт</h3>
+    <p>«Читаем»: буква бежит к букве (М + А = МА), слоги на слух и по картинкам, потом слова, похожие слова (кот — кит), «собери слово», предложения «да или нет» и маленькие истории про семью. Голос не подсказывает слово, пока ребёнок не попробует прочитать сам; на слог можно нажать — он прозвучит.</p>
+    <div class="row lvrow"><button class="pbtn" id="p-rldn" style="--c:var(--slot-dk)">−</button><b>Чтение: ${S.rl} из 10</b><button class="pbtn" id="p-rlup" style="--c:var(--good)">+</button><span class="muted">${RD_DESC[S.rl - 1]}</span></div>
+    <p>«Числа»: посчитать предметы и десятки, найти число до 100, какое число пропущено, где больше, плюс и минус с картинками и без, состав числа, задачки про семью.</p>
+    <div class="row lvrow"><button class="pbtn" id="p-nldn" style="--c:var(--slot-dk)">−</button><b>Счёт: ${S.nl} из 10</b><button class="pbtn" id="p-nlup" style="--c:var(--good)">+</button><span class="muted">${NM_DESC[S.nl - 1]}</span></div>
+    <p class="muted">Уровень растёт сам после четырёх верных ответов подряд и снижается, если два задания подряд не получаются. Миссий: чтение — ${S.rMis || 0}, счёт — ${S.nMis || 0}.</p>
+    <label><input type="checkbox" id="p-mix" ${S.mix !== false ? 'checked' : ''}> В обычной миссии с буквами — одно задание на чтение и одно на счёт</label>
+  </section>
+  <section>
     <h3>Ребёнок</h3>
     <div class="row">
       <label>Имя <input type="text" id="p-name" value="${esc(S.name)}" maxlength="20" autocomplete="off"></label>
@@ -2379,7 +2439,7 @@ function renderParent() {
     <label><input type="radio" name="p-mode" id="p-sound" ${S.mode === 'sound' ? 'checked' : ''}> Как звуки: «мэ», «лэ», «сэ» — так легче потом читать слоги</label>
     <label><input type="radio" name="p-mode" id="p-alpha" ${S.mode === 'alpha' ? 'checked' : ''}> Как в алфавите: «эм», «эль», «эс»</label>
     <p class="muted">Лучше выбрать так, как называют буквы в саду или на подготовке к школе.</p>
-    <label><input type="checkbox" id="p-lower" ${S.lower ? 'checked' : ''}> Добавлять маленькие (строчные) буквы, когда большая выучена на ★★</label>
+    <label><input type="checkbox" id="p-lower" ${S.lower ? 'checked' : ''}> Добавлять маленькие (строчные) буквы, когда большая выучена на ★★ (включается само, когда 15 букв узнаются уверенно; в «Читаем» с 5-го уровня слова пишутся маленькими)</label>
   </section>
   <section>
     <h3>Голос и звук</h3>
@@ -2400,7 +2460,7 @@ function renderParent() {
     <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы.</p>
     <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Четыре участка (луг, зима, пляж, Луна), блоки разложены по вкладкам, есть рамка (заполнить прямоугольник), динамит (нажать на него — взрывается, алмазы возвращаются), день и ночь. На стройке живёт семья: папа, мама, Максим, Даниил и собаки — их ставят из вкладки «Семья», они ходят по постройкам и заходят в двери. Чертежи (11 штук) — за первую постройку по каждому +10 алмазов. Алмазы также открывают новых героев.</p>
     <p>Ошибки не наказываются: игра называет букву, на которую нажал ребёнок, а после второй ошибки подсвечивает нужную.</p>
-    <p>«Танчики»: подбивать можно только танки с нужной буквой (по другим снаряд отскакивает, а игра называет букву) и защищать сундук. Собаки и малыш Даниил — бонусы: Винни пугает танки, Элли даёт жизнь, Герда охраняет сундук, Даниил даёт щит. После победы уровень растёт (1–10).</p>
+    <p>«Танчики»: подбивать можно только танки с нужной буквой, слогом, числом или ответом примера (раунды чередуются; по другим снаряд отскакивает, а игра называет, что на танке) и защищать сундук. Собаки и малыш Даниил — бонусы: Винни пугает танки, Элли даёт жизнь, Герда охраняет сундук, Даниил даёт щит. После победы уровень растёт (1–10).</p>
     <p>«Найди букву» и финальный бой усложняются сами: после трёх быстрых ответов подряд растёт уровень (больше блоков, похожие буквы, «найди все»), в бою — быстрее дроны и промах отнимает секунды. Если не получается — уровень снижается. Сейчас: найди букву — ${S.fl} из 8, бой — ${S.al} из 10.</p>
     <p>Лучше одна-две миссии в день, чем час подряд. Прогресс хранится в этом браузере на этом устройстве.</p>
   </section>`;
@@ -2411,7 +2471,9 @@ function renderParent() {
   on('p-girl', 'change', () => { S.boy = false; save(); });
   on('p-sound', 'change', () => { S.mode = 'sound'; save(); });
   on('p-alpha', 'change', () => { S.mode = 'alpha'; save(); });
-  on('p-lower', 'change', e => { S.lower = e.target.checked; save(); });
+  on('p-lower', 'change', e => { S.lower = e.target.checked; S.lowerTouched = true; save(); });
+  on('p-mix', 'change', e => { S.mix = e.target.checked; save(); });
+  [['rl', -1], ['rl', 1], ['nl', -1], ['nl', 1]].forEach(([k, d]) => on(`p-${k}${d > 0 ? 'up' : 'dn'}`, 'click', () => { S[k] = clamp(S[k] + d, 1, 10); S[k + 'S'] = S[k + 'B'] = 0; save(); renderParent(); }));
   on('p-voice', 'change', e => { S.voiceURI = e.target.value; save(); TTS.choose(); });
   on('p-test', 'click', () => { Voice.unlock(); Sfx.unlock(); say([P.thisIs('М'), P.find('А', 0)]); });
   on('p-rate', 'change', e => { S.rate = parseFloat(e.target.value) || .9; save(); say(T.rateTest); });
@@ -2444,7 +2506,7 @@ function animHero() { heroFrame ^= 1; const im = $('#home-hero-img'); if (!im ||
 function boot() {
   load(); buildSprites(); genTextures(); applySprites();
   const rs2 = document.documentElement.style;
-  rs2.setProperty('--tex-grass', `url(${TEX.grass.url})`); rs2.setProperty('--tex-dirt', `url(${TEX.dirt.url})`);
+  rs2.setProperty('--tex-grass', `url(${TEX.grass.url})`); rs2.setProperty('--tex-dirt', `url(${TEX.dirt.url})`); rs2.setProperty('--tex-gold', `url(${TEX.gold.url})`);
   FX.resize(); applyNames(); gemsText(); show('home');
   setInterval(animHero, 420);
 
@@ -2458,6 +2520,9 @@ function boot() {
   });
 
   $('#btn-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
+  $('#btn-read').addEventListener('click', () => { Sfx.tap(); startLearn('read'); });
+  $('#btn-num').addEventListener('click', () => { Sfx.tap(); startLearn('num'); });
+  newBadges();
   $('#home-hero').addEventListener('click', () => {
     Sfx.tap(); const im = $('#home-hero-img'); if (im.animate) im.animate([{ translate: '0 0' }, { translate: '0 -40px' }, { translate: '0 0' }], { duration: 450, easing: 'ease-out' });
     sayPick([S.name ? N.heroTap() : T.heroTap0, T.heroTap0]);
@@ -2471,7 +2536,7 @@ function boot() {
   $$('[data-home]').forEach(b => b.addEventListener('click', () => { Sfx.tap(); goHome(); }));
   $('#btn-exit').addEventListener('click', () => {
     Sfx.tap();
-    if (!RUN || RUN.kind !== 'mission') { goHome(); return; }
+    if (!RUN || !['mission', 'read', 'num'].includes(RUN.kind)) { goHome(); return; }
     modal(`<h3>Выйти из миссии?</h3><div class="modal-row"><button class="pbtn big" data-act="stay" style="--c:var(--good)">${sprImg('i_play')}<span>Играть</span></button><button class="pbtn big" data-act="leave" style="--c:var(--hero)">${sprImg('i_home')}<span>Выйти</span></button></div>`, a => {
       if (a.dataset.act === 'stay') closeModal(); if (a.dataset.act === 'leave') goHome();
     });
@@ -2484,7 +2549,7 @@ function boot() {
     Sfx.tap(); if (ABC_MODE === 'write') startTrace(c); else openCard(c);
   });
   $('#rw-build').addEventListener('click', () => { Sfx.tap(); openBuild(); });
-  $('#rw-again').addEventListener('click', () => { Sfx.tap(); startMission(); });
+  $('#rw-again').addEventListener('click', () => { Sfx.tap(); again(); });
   $('#rw-home').addEventListener('click', () => { Sfx.tap(); goHome(); });
   $('#rw-heroes').addEventListener('click', () => { Sfx.tap(); openHeroes(); });
   $('#hero-grid').addEventListener('click', e => { const c = e.target.closest('.hcard'); if (c) tapHero(c.dataset.h, c); });
@@ -2509,7 +2574,7 @@ function boot() {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* ignore */ }
   }
-  window.__game = { S: () => S, LET, STROKES, BP, HEROES, BLOCKS, WW, WH, BV, TK, PETS, lv, unlocked, allPhrases, wallet, usedBlocks, bpProgress, get RUN() { return RUN; }, get TR() { return TR; }, save };
+  window.__game = { S: () => S, LET, STROKES, BP, HEROES, BLOCKS, WW, WH, BV, TK, PETS, lv, unlocked, allPhrases, sayAs, wallet, usedBlocks, bpProgress, RW, SYL_ALL, PICS, YESNO, STORIES, NWP, numKey, sylKey, wordKey, drawKey, arithGen, get RUN() { return RUN; }, get TR() { return TR; }, save };
 }
 const startApp = () => { try { boot(); } catch (e) { console.error(e); } };
 if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(startApp); else startApp();

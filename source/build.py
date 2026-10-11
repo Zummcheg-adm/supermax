@@ -29,6 +29,8 @@ def font_css():
 css = open(f'{ROOT}/src/style.css', encoding='utf-8').read()
 body = open(f'{ROOT}/src/body.html', encoding='utf-8').read()
 js = open(f'{ROOT}/src/app.js', encoding='utf-8').read()
+assert js.count('/*LEARN*/') == 1
+js = js.replace('/*LEARN*/', open(f'{ROOT}/src/learn.js', encoding='utf-8').read())
 assert '/*SPRITES*/{}' in js and '/*CLIPS*/{}' in js and '/*PWA*/false' in js
 js = js.replace('/*SPRITES*/{}', to_json())
 clips_path = '/home/claude/tts/clips.json'

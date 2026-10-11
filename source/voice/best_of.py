@@ -7,7 +7,7 @@ from asr import transcribe
 
 AF = ('asetrate=22050*1.22,aresample=22050,atempo=0.8197,silenceremove=start_periods=1:start_threshold=-50dB,'
       'areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse')
-TMP = '/tmp/claude-0/bestof'
+TMP = f'/tmp/claude-0/bestof{os.getpid()}'
 os.makedirs(TMP, exist_ok=True)
 
 
@@ -25,14 +25,18 @@ def lev(a, b):
     return prev[-1]
 
 
+SAYAS = json.load(open('/home/claude/tts/sayas.json', encoding='utf-8')) if os.path.exists('/home/claude/tts/sayas.json') else {}
+
+
 def best(text, n=6, speed=1.0, noise=0.6):
     key = hashlib.md5(text.encode('utf-8')).hexdigest()[:16]
     clean = text.replace('«', '').replace('»', '')
+    spoken = SAYAS.get(text, clean)
     target = norm(clean)
     scored = []
     for k in range(n):
         raw = f'{TMP}/{key}_{k}.wav'; kid = f'{TMP}/{key}_{k}_k.wav'
-        synth(clean, raw, 'irina', speed=speed, noise=noise)
+        synth(spoken, raw, 'irina', speed=speed, noise=noise)
         subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', raw, '-af', AF, '-ar', '16000', '-ac', '1', kid], check=True)
         hyp = transcribe(kid)
         scored.append((lev(norm(hyp), target) / max(1, len(target)), k, hyp))

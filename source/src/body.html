@@ -17,7 +17,13 @@
       <div class="home-row">
         <button class="hero-big" id="home-hero" aria-label="Герой"><img class="spr float" id="home-hero-img" data-spr="hero" alt=""></button>
         <div class="home-actions">
-          <button class="pbtn play pulse" id="btn-play"><img class="spr" data-spr="i_play" alt=""><span>ИГРАТЬ</span></button>
+          <div class="mbar">
+            <button class="pbtn play pulse" id="btn-play"><img class="spr" data-spr="i_play" alt=""><span>ИГРАТЬ</span></button>
+            <div class="mrow">
+              <button class="pbtn mbtn" id="btn-read" style="--c:var(--cape)"><img class="spr" data-spr="i_read" alt=""><span>ЧИТАЕМ</span><i class="badge">НОВОЕ</i></button>
+              <button class="pbtn mbtn" id="btn-num" style="--c:var(--good)"><img class="spr" data-spr="i_num" alt=""><span>ЧИСЛА</span><i class="badge">НОВОЕ</i></button>
+            </div>
+          </div>
           <div class="tiles">
             <button class="pbtn tile" data-go="abc" style="--c:var(--sun)"><img class="spr" data-spr="i_book" alt=""><span>Азбука</span></button>
             <button class="pbtn tile" data-go="write" style="--c:var(--grass)"><img class="spr" data-spr="i_pencil" alt=""><span>Пропись</span></button>

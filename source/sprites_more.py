@@ -310,6 +310,20 @@ SPR['i_read'] = [  # открытая книжка со слогом
     "....KKKK....",
     "............",
 ]
+SPR['i_cross'] = [
+    "............",
+    ".KK......KK.",
+    "KWWK....KWWK",
+    "KWWWK..KWWWK",
+    ".KWWWKKWWWK.",
+    "..KWWWWWWK..",
+    "...KWWWWK...",
+    "..KWWWWWWK..",
+    ".KWWWKKWWWK.",
+    "KWWWK..KWWWK",
+    "KWWK....KWWK",
+    ".KK......KK.",
+]
 SPR['i_sun'] = [
     "............",
     ".....Y......",
