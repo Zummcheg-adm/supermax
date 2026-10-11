@@ -43,6 +43,9 @@ with sync_playwright() as pw:
         return page.evaluate("([x, y]) => window.__game.S().world[y * window.__game.WW + x]", [x, y])
 
     def tool(t):
+        if t not in ('pick', 'fill'):
+            tab = page.evaluate("(t) => window.__game.BLOCKS.find(b => b.t === t).cat", t)
+            page.click(f'.hb-tab[data-tab="{tab}"]', force=True)
         page.click(f'.hb[data-t="{t}"]', force=True); page.wait_for_timeout(50)
 
     def wallet():

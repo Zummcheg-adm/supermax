@@ -120,11 +120,11 @@ with sync_playwright() as pw:
     # build: dogs walk, Герда comes to her finished kennel
     page.evaluate("() => { goHome(); const S = window.__game.S(); S.gems = 200; S.bp = 4; openBuild(); }")
     page.wait_for_timeout(900)
-    check(page.evaluate("() => document.querySelectorAll('#bdogs .bdog.trot').length") == 2, 'Винни and Элли walk on the build site')
+    check(sorted(page.evaluate("() => BV.res.map(r => r.id)")) == ['elli', 'vinni'], 'Винни and Элли walk on the build site')
     page.evaluate("""() => { const b = window.__game.BP[4]; const S = window.__game.S(); let w = S.world.split('');
       b.cells.forEach(c => { w[(b.oy + c.y) * 16 + b.ox + c.x] = TCH[c.t]; }); S.world = w.join(''); bCheck(true); }""")
     page.wait_for_timeout(2500)
-    check(page.is_visible('#bdogs .bdog.gerda'), 'Герда sits by her kennel')
+    check(page.evaluate("() => BV.res.some(r => r.id === 'gerda')"), 'Герда comes to her kennel')
     check('Ура! Будка для Герды построена!' in said(), 'kennel blueprint finished')
     page.screenshot(path=f'{OUT}/{TAG}_t_build.png')
     page.evaluate("() => goHome()"); page.wait_for_timeout(400)

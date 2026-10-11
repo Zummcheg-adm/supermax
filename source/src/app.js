@@ -112,13 +112,23 @@ const STROKES = {
 };
 
 /* ---------- build mode: blocks & blueprints ---------- */
-const BCH = { g: 'grass', d: 'dirt', s: 'stone', c: 'cobble', p: 'planks', l: 'log', b: 'brick', w: 'glass', f: 'leaves', y: 'gold', i: 'gemb', r: 'red', W: 'white', u: 'blue', k: 'dark', D: 'door', a: 'sand', o: 'orange', Y: 'ylw' };
+const BCH = { g: 'grass', d: 'dirt', s: 'stone', c: 'cobble', p: 'planks', l: 'log', b: 'brick', w: 'glass', f: 'leaves', y: 'gold', i: 'gemb', r: 'red', W: 'white', u: 'blue', k: 'dark', D: 'door', a: 'sand', o: 'orange', Y: 'ylw',
+  n: 'snow', v: 'water', L: 'slopeL', R: 'slopeR', F: 'fence', x: 'flower', h: 'lamp', t: 'tnt', m: 'moon' };
 const TCH = Object.fromEntries(Object.entries(BCH).map(([k, v]) => [v, k]));
-const BLOCKS = [
-  { t: 'planks', name: 'Доски' }, { t: 'brick', name: 'Кирпичик' }, { t: 'stone', name: 'Камень' }, { t: 'cobble', name: 'Булыжник' },
-  { t: 'glass', name: 'Стекло' }, { t: 'door', name: 'Дверка' }, { t: 'log', name: 'Бревно' }, { t: 'leaves', name: 'Листья' },
-  { t: 'grass', name: 'Трава' }, { t: 'sand', name: 'Песок' }, { t: 'gold', name: 'Золото' }, { t: 'gemb', name: 'Алмазный блок' },
-  { t: 'red', name: 'Красный блок' }, { t: 'blue', name: 'Синий блок' }, { t: 'white', name: 'Белый блок' }, { t: 'dark', name: 'Чёрный блок' },
+const BLOCKS = [   // cat: 0 стены, 1 цвета, 2 природа, 3 особые
+  { t: 'planks', name: 'Доски', cat: 0 }, { t: 'brick', name: 'Кирпичик', cat: 0 }, { t: 'stone', name: 'Камень', cat: 0 }, { t: 'cobble', name: 'Булыжник', cat: 0 },
+  { t: 'log', name: 'Бревно', cat: 0 }, { t: 'glass', name: 'Стекло', cat: 0 }, { t: 'door', name: 'Дверка', cat: 0 }, { t: 'gold', name: 'Золото', cat: 0 }, { t: 'gemb', name: 'Алмазный блок', cat: 0 },
+  { t: 'red', name: 'Красный блок', cat: 1 }, { t: 'orange', name: 'Оранжевый блок', cat: 1 }, { t: 'ylw', name: 'Жёлтый блок', cat: 1 }, { t: 'blue', name: 'Синий блок', cat: 1 }, { t: 'white', name: 'Белый блок', cat: 1 }, { t: 'dark', name: 'Чёрный блок', cat: 1 },
+  { t: 'grass', name: 'Трава', cat: 2 }, { t: 'leaves', name: 'Листья', cat: 2 }, { t: 'sand', name: 'Песок', cat: 2 }, { t: 'snow', name: 'Снег', cat: 2 }, { t: 'water', name: 'Вода', cat: 2 }, { t: 'flower', name: 'Цветы', cat: 2 }, { t: 'moon', name: 'Лунный камень', cat: 2 },
+  { t: 'slopeL', name: 'Крыша', cat: 3 }, { t: 'slopeR', name: 'Крыша', cat: 3 }, { t: 'fence', name: 'Забор', cat: 3 }, { t: 'lamp', name: 'Фонарь', cat: 3 }, { t: 'tnt', name: 'Динамит', cat: 3 },
+];
+const DECOR = new Set(['slopeL', 'slopeR', 'fence', 'flower', 'lamp']);          // без рамки блока
+const PASS = new Set(['.', 'D', 'x', 'h', 'v']);                                // сквозь них ходят жители: пусто, дверь, цветы, фонарь, вода
+const PLOTS = [
+  { name: 'Луг', say: 'Летний луг!', top: 'grass', under: 'dirt', cls: '' },
+  { name: 'Зима', say: 'Зима!', top: 'snowtop', under: 'dirt', cls: 'plot-winter' },
+  { name: 'Пляж', say: 'Пляж!', top: 'sand', under: 'sand', cls: 'plot-beach' },
+  { name: 'Луна', say: 'Луна!', top: 'moon', under: 'moon', cls: 'plot-moon' },
 ];
 const WW = 16, WH = 10;      // the building grid: columns × rows above the ground
 const BONUS = 10;            // diamonds for the first finished blueprint of each kind
@@ -170,6 +180,54 @@ const BP = [
     'rrrrr',
     'ppkpp',
     'pkkkp'] },
+  { name: 'Танк', acc: 'танк', done: 'Ура! Танк построен!', rows: [
+    '...ffff....',
+    '..ffffffkkk',
+    '.fffffffff.',
+    'ccccccccccc',
+    '.k.k.k.k.k.'] },
+  { name: 'Корабль', acc: 'корабль', done: 'Ура! Корабль построен!', rows: [
+    '......r......',
+    '......l......',
+    '....WWlWW....',
+    '...WWWlWWW...',
+    '..WWWWlWWWW..',
+    '......l......',
+    'ppppppppppppp',
+    '.ppwppwppwpp.',
+    '..ppppppppp..'] },
+  { name: 'Маяк', acc: 'маяк', done: 'Ура! Маяк построен! Ночью он светит.', rows: [
+    '..h..',
+    '.kkk.',
+    '.www.',
+    '.rrr.',
+    '.WWW.',
+    '.rrr.',
+    '.WwW.',
+    '.rrr.',
+    '.WWW.',
+    'ccccc'] },
+  { name: 'Ёлка', acc: 'ёлку', done: 'Ура! Ёлка готова!', rows: [
+    '....y....',
+    '...fff...',
+    '..frfff..',
+    '...fff...',
+    '..fffuf..',
+    '.fffffff.',
+    '..fyfff..',
+    '.ffffrff.',
+    'fffffffff',
+    '....l....'] },
+  { name: 'Большой дом', acc: 'большой дом', done: 'Ура! Большой дом построен! Тут поместится вся семья.', rows: [
+    '.....LR.....',
+    '....LrrR....',
+    '...LrrrrR...',
+    '..LrrrrrrR..',
+    '.LrrrrrrrrR.',
+    '.bbbbbbbbbb.',
+    '.bwwbbbbwwb.',
+    '.bwwbbDbwwb.',
+    '.bbbbbDbbbb.'] },
 ];
 BP.forEach(b => {
   b.h = b.rows.length; b.w = Math.max(...b.rows.map(r => r.length)); b.cells = [];
@@ -189,20 +247,35 @@ const HEROES = [
   { id: 'h_knight', name: 'Рыцарь', price: 145 },
   { id: 'h_pirate', name: 'Пират', price: 185 },
   { id: 'h_wizard', name: 'Волшебник', price: 230 },
+  { id: 'h_tanker', name: 'Танкист', price: 120 },
+  { id: 'h_racer', name: 'Гонщик', price: 140 },
+  { id: 'h_fire', name: 'Пожарный', price: 160 },
+  { id: 'h_soccer', name: 'Футболист', price: 180 },
+  { id: 'h_shark', name: 'Акула', price: 200 },
+  { id: 'h_alien', name: 'Инопланетянин', price: 230 },
+  { id: 'h_ice', name: 'Ледяной герой', price: 260 },
+  { id: 'h_flame', name: 'Огненный герой', price: 300 },
 ];
 
 /* ---------- state ---------- */
 const KEY = 'supermax-letters-v1';
-const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, tank: 1, tankSeen: 0, petsSeen: 0, L: {} });
+const DEF = () => ({ v: 1, name: 'Максим', hero: 'Супер-Макс', boy: true, mode: 'sound', lower: false, voiceURI: '', rate: 0.9, sfx: true, sysVoice: false, len: 8, gems: 0, placed: 0, missions: 0, skin: 'hero', owned: ['hero'], spent: 0, world: '', bp: -1, bpDone: [], btool: 'planks', buildSeen: 0, fl: 2, fs: 0, al: 3, tank: 1, tankSeen: 0, petsSeen: 0, plot: 0, worlds: null, res: null, night: false, btab: 0, lastBlock: 'planks', resSeen: 0, L: {} });
 let S = DEF();
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && typeof o === 'object') { S = Object.assign(DEF(), o); S.L = o.L || {}; } } } catch (e) { /* storage unavailable */ }
   ALPHA.forEach(c => { S.L[c] = Object.assign({ u: 0, sc: 0, n: 0, ok: 0, st: 0, t: 0, intro: 0 }, S.L[c] || {}); });
-  const w = typeof S.world === 'string' ? S.world : '';
-  S.world = w.length === WW * WH ? [...w].map(ch => (ch !== '.' && BCH[ch]) ? ch : '.').join('') : '.'.repeat(WW * WH);
+  const clean = w => (typeof w === 'string' && w.length === WW * WH) ? [...w].map(ch => (ch !== '.' && BCH[ch]) ? ch : '.').join('') : '.'.repeat(WW * WH);
+  if (!Array.isArray(S.worlds) || S.worlds.length !== PLOTS.length) S.worlds = [S.world, '', '', ''];
+  S.worlds = S.worlds.map(clean);
+  S.plot = clamp(Math.round(+S.plot) || 0, 0, PLOTS.length - 1);
+  S.world = S.worlds[S.plot];
+  if (!Array.isArray(S.res) || S.res.length !== PLOTS.length) S.res = PLOTS.map(() => []);
+  S.res = S.res.map(a => Array.isArray(a) ? a.filter(r => r && typeof r.id === 'string' && isFinite(r.x) && isFinite(r.y)) : []);
+  if (!BLOCKS.some(b => b.t === S.lastBlock)) S.lastBlock = 'planks';
+  S.btab = clamp(Math.round(+S.btab) || 0, 0, 4);
   if (!(S.bp >= -1 && S.bp < BP.length)) S.bp = -1;
   if (!Array.isArray(S.bpDone)) S.bpDone = [];
-  if (S.btool !== 'pick' && !BLOCKS.some(b => b.t === S.btool)) S.btool = 'planks';
+  if (S.btool !== 'pick' && S.btool !== 'fill' && !String(S.btool).startsWith('fam:') && !BLOCKS.some(b => b.t === S.btool)) S.btool = 'planks';
   S.fl = clamp(Math.round(+S.fl) || 2, 1, 8); S.al = clamp(Math.round(+S.al) || 3, 1, 10); S.fs = Math.max(0, +S.fs || 0);
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
@@ -275,6 +348,16 @@ function genTextures() {
   make('door', g => { speck(g, '#7a5230', ['#6a4628', '#8a5e38'], .3); g.fillStyle = '#4e3218'; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16); g.fillRect(7, 0, 2, 16); g.fillStyle = '#ffc62e'; g.fillRect(11, 8, 2, 2); });
   make('sand', g => speck(g, '#e8d69a', ['#d9c486', '#f2e3ae', '#cdb877'], .4));
   make('orange', g => speck(g, '#ff8a1f', ['#ffb14a', '#e86f0c'], .35));
+  make('snow', g => speck(g, '#f4f8ff', ['#e2ecf8', '#ffffff', '#d3e1f2'], .35));
+  make('snowtop', g => { speck(g, '#8a5a34', ['#6d4426', '#a36d3f', '#5a371d'], .45); for (let x = 0; x < 16; x++) { const h = 4 + (R() < .5 ? 1 : 0); for (let y = 0; y < h; y++) px(g, x, y, ['#f4f8ff', '#ffffff', '#e2ecf8'][Math.floor(R() * 3)]); } });
+  make('water', g => { g.fillStyle = '#3f8fe0'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#5aa6f0'; for (let y = 2; y < 16; y += 5) for (let x = 0; x < 16; x++) if ((x + y) % 6 < 3) g.fillRect(x, y + ((x >> 2) & 1), 1, 1); g.fillStyle = '#a6d6ff'; g.fillRect(0, 0, 16, 1); });
+  make('moon', g => { speck(g, '#a9a9b8', ['#9a9aaa', '#b8b8c6', '#8f8f9e'], .4); [[4, 5, 2], [11, 10, 3], [12, 3, 1]].forEach(([x, y, r]) => { g.fillStyle = '#85859a'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = '#c4c4d2'; g.fillRect(x - r, y - r, 1, 1); }); });
+  make('tnt', g => { g.fillStyle = '#d8343c'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#a8242c'; [3, 7, 11].forEach(x => g.fillRect(x, 0, 1, 16)); g.fillStyle = '#ffffff'; g.fillRect(0, 6, 16, 4); g.fillStyle = '#1b1530'; [[2, 7], [3, 7], [5, 7], [6, 8], [7, 7], [9, 7], [10, 7], [10, 8], [12, 7], [13, 7]].forEach(([x, y]) => g.fillRect(x, y, 1, 1)); g.fillStyle = '#4a3a2a'; g.fillRect(7, 0, 2, 2); });
+  make('flower', g => { g.clearRect(0, 0, 16, 16); g.fillStyle = '#4fa63e'; for (let x = 0; x < 16; x++) g.fillRect(x, 13 + (x % 3 === 0 ? 0 : 1), 1, 3); [[3, '#e8363f'], [8, '#ffc62e'], [13, '#ff6fae']].forEach(([x, c], k) => { const top = 5 + (k % 2) * 2; g.fillStyle = '#3d8c35'; g.fillRect(x, top + 2, 1, 14 - top - 2); g.fillStyle = c; g.fillRect(x - 1, top, 3, 3); g.fillRect(x, top - 1, 1, 5); g.fillStyle = '#fff4d6'; g.fillRect(x, top + 1, 1, 1); }); });
+  make('fence', g => { g.clearRect(0, 0, 16, 16); g.fillStyle = '#1b1530'; [[1, 2, 4, 14], [11, 2, 4, 14], [0, 4, 16, 4], [0, 10, 16, 4]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h)); g.fillStyle = '#c8955a'; [[2, 3, 2, 12], [12, 3, 2, 12], [0, 5, 16, 2], [0, 11, 16, 2]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h)); });
+  make('lamp', g => { g.clearRect(0, 0, 16, 16); g.fillStyle = '#1b1530'; g.fillRect(4, 0, 8, 7); g.fillRect(7, 7, 2, 9); g.fillRect(5, 14, 6, 2); g.fillStyle = '#ffe680'; g.fillRect(5, 1, 6, 5); g.fillStyle = '#fff8cc'; g.fillRect(6, 2, 2, 2); g.fillStyle = '#3b3352'; g.fillRect(7, 8, 1, 6); });
+  const slope = (name, left) => make(name, g => { g.clearRect(0, 0, 16, 16); g.save(); g.beginPath(); if (left) { g.moveTo(0, 16); g.lineTo(16, 0); g.lineTo(16, 16); } else { g.moveTo(0, 0); g.lineTo(16, 16); g.lineTo(0, 16); } g.closePath(); g.clip(); g.fillStyle = '#c8423a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#9e2f29'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1); for (let y = 0; y < 16; y += 4) for (let x = (y % 8 ? 2 : 6); x < 16; x += 8) g.fillRect(x, y, 1, 3); g.restore(); g.strokeStyle = '#1b1530'; g.lineWidth = 1.2; g.beginPath(); if (left) { g.moveTo(0, 16); g.lineTo(16, 0); } else { g.moveTo(0, 0); g.lineTo(16, 16); } g.stroke(); });
+  slope('slopeL', true); slope('slopeR', false);
   // cracks (3 stages, accumulating)
   const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); g.fillStyle = 'rgba(27,21,48,.9)';
   const RC = mulberry32(42);
@@ -449,6 +532,11 @@ const T = {
   baby: 'Это малыш Даниил! Он болеет за тебя!', baby2: 'Даниил смеётся: агу!',
   foundV: 'Винни нашёл букву!', foundE: 'Элли нашла букву!', foundG: 'Герда нашла букву!',
   kennelLove: 'Герде нравится её будка!',
+  famDad: 'Это папа!', famMom: 'Это мама!', famMax: 'Это Максим!', famPut: 'Покажи пальцем, где жить!',
+  famHello: 'Смотри! Теперь на стройке живёт наша семья. Нажми на семью внизу!',
+  plotPick: 'Где будем строить?', nightOn: 'Наступила ночь! Горят фонари и окна.', nightOff: 'Доброе утро!',
+  tntHow: 'Динамит! Поставь его и нажми на него ещё раз. Будет бум!',
+  fillTool: 'Рамка! Проведи пальцем, и всё внутри заполнится блоками.', fillShort: 'Рамка!',
   tanks: 'Танчики! Подбивай только танки с нужной буквой и береги сундук!',
   tankHit: 'Ой! Наш танк подбит!', tankLost: 'Танки закончились. Давай ещё раз!', chestLost: 'Сундук разбит! Давай ещё раз!',
   tankWin: 'Победа! Танковый бой выигран!',
@@ -504,6 +592,7 @@ function allPhrases() {
   }
   BP.forEach((b, i) => { out.add(P.plan(i)); out.add(b.done); });
   BLOCKS.forEach(b => out.add(P.block(b)));
+  PLOTS.forEach(p => out.add(p.say));
   HEROES.forEach(h => out.add(P.heroNow(h)));
   Object.assign(S, keep);
   return [...out];
@@ -555,6 +644,7 @@ const Sfx = (() => {
     bark() { [0, .18].forEach(a => { tone(620, .1, { at: a, to: 300, type: 'square', v: .13 }); noise(.07, { at: a, v: .16, f: 1100 }); }); },
     giggle() { [740, 900, 780, 1040, 880].forEach((f, i) => tone(f, .07, { at: i * .075, type: 'triangle', v: .1 })); },
     shot() { tone(1050, .07, { to: 420, type: 'square', v: .08 }); noise(.04, { v: .1, f: 2400 }); },
+    fuse() { noise(1.2, { v: .1, f: 3200, q: .5 }); },
   };
 })();
 
@@ -603,7 +693,7 @@ const FX = (() => {
 /* ---------- screens & HUD ---------- */
 let CUR = 'home';
 function show(name) { CUR = name; $$('.screen').forEach(s => { s.hidden = s.id !== 'scr-' + name; }); gemsText(); }
-const usedBlocks = () => { const w = S.world || ''; let n = 0; for (let i = 0; i < w.length; i++) if (w[i] !== '.') n++; return n; };
+const usedBlocks = () => { let n = 0; (S.worlds || [S.world]).forEach((w0, k) => { const w = k === S.plot ? (S.world || '') : (w0 || ''); for (let i = 0; i < w.length; i++) if (w[i] !== '.') n++; }); return n; };
 const wallet = () => Math.max(0, (S.gems || 0) - (S.spent || 0) - usedBlocks());
 const nextHero = () => HEROES.find(h => !owns(h.id));
 const canBuyAny = () => { const h = nextHero(); return !!h && HEROES.some(x => !owns(x.id) && x.price <= wallet()); };
@@ -1320,13 +1410,15 @@ function speakCard(c) { say([P.nomEx(c), P.introWords(c)]); }
 
 /* ---------- build mode (Стройка): ребёнок строит сам, 1 алмаз = 1 блок ---------- */
 const HERO_W = 2.2;          // cells reserved left of the grid for the hero
-const BV = { g: null, raf: 0, anims: [], press: null, hop: 0, lift: 0, busy: false, done: false, token: { alive: false }, pickTold: false, emptyAt: 0, badAt: 0, saveT: 0 };
+const BV = { g: null, raf: 0, anims: [], press: null, hop: 0, lift: 0, busy: false, done: false, token: { alive: false }, pickTold: false, fillTold: false, emptyAt: 0, badAt: 0, saveT: 0, fuses: [], res: [], last: 0, shake: 0, lc: null };
 const cellCh = i => (S.world || '')[i] || '.';
-function setCell(i, ch) { const w = S.world; S.world = w.slice(0, i) + ch + w.slice(i + 1); }
+function setCell(i, ch) { const w = S.world; S.world = w.slice(0, i) + ch + w.slice(i + 1); if (S.worlds) S.worlds[S.plot] = S.world; }
 function bSave() { clearTimeout(BV.saveT); BV.saveT = setTimeout(save, 250); }
 const curBP = () => (S.bp >= 0 && BP[S.bp]) ? BP[S.bp] : null;
 function bpProgress(b = curBP()) { if (!b) return [0, 0]; let d = 0; b.set.forEach(i => { if (cellCh(i) !== '.') d++; }); return [d, b.n]; }
 function drawBlock(g, t, x, y, s, ghost) {
+  if (DECOR.has(t)) { g.drawImage(TEX[t].cv, x, y, s, s); return; }
+  if (t === 'water' && !ghost) { const a = g.globalAlpha; g.globalAlpha = a * .82; g.drawImage(TEX[t].cv, x, y, s, s); g.globalAlpha = a; return; }
   g.drawImage(TEX[t].cv, x, y, s, s);
   if (ghost) return;
   const e = Math.max(2, Math.round(s * .08));
@@ -1343,18 +1435,128 @@ function bLayout() {
   return (BV.g = { W, H, dpr, cs, ox, gy, oy: gy - WH * cs });
 }
 function bReq() { if (!BV.raf) BV.raf = requestAnimationFrame(bDraw); }
+
+/* семья на стройке: ходят по блокам, заходят в двери, забираются на ступеньку */
+const FAMILY = [
+  { id: 'dad', name: 'Папа', spr: 'dad', h: 2, sp: .9, line: () => T.famDad },
+  { id: 'mom', name: 'Мама', spr: 'mom', h: 2, sp: .85, line: () => T.famMom },
+  { id: 'max', name: 'Максим', spr: null, h: 2, sp: 1.1, line: () => T.famMax },
+  { id: 'baby', name: 'Даниил', spr: 'baby', h: 1, sp: .45, line: () => T.baby },
+  { id: 'vinni', name: 'Винни', spr: 'dog_vinni', h: 1, sp: 1.4, line: () => T.vinni },
+  { id: 'elli', name: 'Элли', spr: 'dog_elli', h: 1, sp: 1.3, line: () => T.elli },
+  { id: 'gerda', name: 'Герда', spr: 'dog_gerda', h: 1, sp: 1.2, line: () => (BP.some(b => b.kennel && bpProgress(b)[0] === b.n) ? T.kennelLove : T.gerda) },
+];
+const famById = id => FAMILY.find(f => f.id === id);
+const famSpr = f => f.spr || heroKey();
+function solidAt(cx, cy) { if (cx < 0 || cx >= WW || cy >= WH) return true; if (cy < 0) return false; return !PASS.has(cellCh(cy * WW + cx)); }
+function roomAt(cx, y, h) { for (let k = 0; k < h; k++) if (solidAt(cx, y - k)) return false; return true; }
+function resLand(r) {
+  const f = famById(r.id), c = Math.floor(r.x); let guard = 0;
+  while (!roomAt(c, r.y, f.h) && r.y > 0 && guard++ < WH) { r.y--; r.dy += 1; }
+  while (!solidAt(c, r.y + 1) && r.y < WH - 1) { r.y++; r.dy -= 1; }
+}
+function resLoad() { return ((S.res && S.res[S.plot]) || []).filter(r => famById(r.id)).map(r => ({ id: r.id, x: clamp(+r.x, .5, WW - .5), y: clamp(Math.round(+r.y), 0, WH - 1), dir: r.dir < 0 ? -1 : 1, dy: 0, t: rnd(0, 3), wait: rnd(0, 1.5), hopT: 0 })); }
+function resSave() { if (!S.res) return; S.res[S.plot] = BV.res.map(r => ({ id: r.id, x: Math.round(r.x * 100) / 100, y: r.y, dir: r.dir })); save(); }
+function resStep(r, dt) {
+  const f = famById(r.id);
+  r.dy *= Math.exp(-9 * dt); if (Math.abs(r.dy) < .01) r.dy = 0;
+  r.t += dt; if (r.hopT > 0) r.hopT = Math.max(0, r.hopT - dt);
+  if (r.wait > 0) { r.wait -= dt; return; }
+  if (Math.random() < dt * .1) { r.wait = rnd(.8, 2.2); if (Math.random() < .4) r.dir *= -1; return; }
+  const c0 = Math.floor(r.x), nx = r.x + r.dir * f.sp * dt, front = Math.floor(nx + r.dir * .45);
+  if (front !== c0 && !roomAt(front, r.y, f.h)) {
+    if (roomAt(front, r.y - 1, f.h) && roomAt(c0, r.y - 1, f.h)) { r.y--; r.dy += 1; }
+    else { r.dir *= -1; r.wait = rnd(.3, .9); return; }
+  }
+  r.x = clamp(nx, .5, WW - .5);
+  if (r.x <= .5 || r.x >= WW - .5) r.dir *= -1;
+  if (!solidAt(Math.floor(r.x), r.y + 1) || !roomAt(Math.floor(r.x), r.y, f.h)) resLand(r);
+}
+function resRect(r) {
+  const G = BV.g, f = famById(r.id), c = SPRC[famSpr(f)]; if (!G || !c) return null;
+  const cs = G.cs, hh = f.h === 2 ? cs * 1.9 : (f.id === 'baby' ? cs * 1.15 : cs), ww = hh * c.width / c.height;
+  const hop = r.hopT > 0 ? Math.sin((r.hopT / .5) * Math.PI) * cs * .55 : 0, bob = r.wait > 0 ? 0 : Math.abs(Math.sin(r.t * 9)) * cs * .06;
+  return { x: G.ox + r.x * cs - ww / 2, y: G.oy + (r.y + 1 + r.dy) * cs - hh - hop - bob, w: ww, h: hh, c };
+}
+function resHit(e) {
+  const r0 = $('#build-cv').getBoundingClientRect(), px = e.clientX - r0.left, py = e.clientY - r0.top;
+  for (let k = BV.res.length - 1; k >= 0; k--) { const q = resRect(BV.res[k]); if (q && px >= q.x - 4 && px <= q.x + q.w + 4 && py >= q.y - 4 && py <= q.y + q.h + 2) return BV.res[k]; }
+  return null;
+}
+function resSfx(f) { if (f.id === 'baby') Sfx.giggle(); else if (f.h === 1) Sfx.bark(); else Sfx.good(); }
+function resTap(r) {
+  const f = famById(r.id);
+  if (S.btool === 'pick') {
+    const q = resRect(r), b = $('#build-cv').getBoundingClientRect();
+    if (q) FX.spawn(b.left + q.x + q.w / 2, b.top + q.y + q.h / 2, ['#ffffff', '#fff4d6', '#9fd0ff'], 18, { speed: .6 });
+    BV.res = BV.res.filter(x => x !== r); resSave(); bHotbar(); Sfx.tap(); bReq(); return;
+  }
+  r.hopT = .5; r.wait = .8; resSfx(f); say(f.line()); bReq();
+}
+function resPut(id, c) {
+  const f = famById(id); if (!f) return;
+  let r = BV.res.find(q => q.id === id), fresh = false;
+  if (!r) { r = { id, x: c.x + .5, y: c.y, dir: Math.random() < .5 ? 1 : -1, dy: 0, t: 0, wait: .6, hopT: 0 }; BV.res.push(r); fresh = true; }
+  else { r.x = c.x + .5; r.y = c.y; r.dy = 0; r.wait = .6; }
+  r.dy = -1.2; resLand(r); r.hopT = .5;
+  resSfx(f); resSave(); bHotbar(); bReq();
+  if (fresh) say(f.line());
+}
+
+/* динамит */
+function bIgnite(i, t = 1.3) { if (BV.fuses.some(f => f.i === i)) return; BV.fuses.push({ i, t }); Sfx.fuse(); bReq(); }
+function bExplode(i) {
+  const cx = i % WW, cy = Math.floor(i / WW); let n = 0;
+  if (cellCh(i) === 't') { setCell(i, '.'); n++; }
+  for (let y = cy - 2; y <= cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++) {
+    if (x < 0 || y < 0 || x >= WW || y >= WH || Math.hypot(x - cx, y - cy) > 2.3) continue;
+    const j = y * WW + x, ch = cellCh(j); if (ch === '.') continue;
+    if (ch === 't') { bIgnite(j, .3); continue; }
+    setCell(j, '.'); n++;
+    const [px, py] = cellPt(j); FX.spawn(px, py, (TEX[BCH[ch]].cols || []).concat(['#ff8a1f', '#ffc62e']), 6, { speed: .8 });
+  }
+  const [px, py] = cellPt(i);
+  FX.spawn(px, py, ['#ff8a1f', '#ffc62e', '#e8363f', '#ffffff', '#1b1530'], 40, { speed: 1.4 });
+  FX.burst(px, py - 30, 'БАБАХ!', { fs: 46 });
+  Sfx.boom(); BV.shake = .45;
+  if (n) setTimeout(() => FX.flyGem([px, py], Math.min(5, n)), 250);
+  BV.res.forEach(r => { if (Math.abs(r.x - cx - .5) < 3.5 && Math.abs(r.y - cy) < 3.5) { r.hopT = .5; r.wait = .9; } });
+  bSave(); bCheck(false); bReq();
+}
+/* рамка: заполнить прямоугольник */
+function bFillRect(a, b) {
+  const t = S.lastBlock; let n = 0, short = false;
+  const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y), t0 = performance.now();
+  for (let y = y1; y >= y0 && !short; y--) for (let x = x0; x <= x1; x++) {
+    const i = y * WW + x; if (cellCh(i) !== '.') continue;
+    if (wallet() <= 0) { short = true; break; }
+    setCell(i, TCH[t]); n++; BV.anims.push({ i, t0: t0 + n * 14, dur: 180, k: .3 });
+  }
+  if (n) { Sfx.place(); BV.hop = t0; bSave(); bumpGems(); bCheck(true); BV.res.forEach(resLand); }
+  if (short) bNoGems();
+  bReq();
+}
+
 function bDraw() {
   BV.raf = 0;
   if (CUR !== 'build') return;
   const G = BV.g || bLayout(); if (!G) return;
-  const g = $('#build-cv').getContext('2d'), { cs, ox, oy, gy } = G, now = performance.now();
+  const cv = $('#build-cv'), g = cv.getContext('2d'), { cs, ox, oy, gy } = G, now = performance.now();
+  const dt = Math.min(.05, (now - (BV.last || now)) / 1000); BV.last = now;
+  // таймеры: фитили и жители
+  if (BV.fuses.length) { BV.fuses.forEach(f => { f.t -= dt; }); const boom = BV.fuses.filter(f => f.t <= 0); BV.fuses = BV.fuses.filter(f => f.t > 0); boom.forEach(f => bExplode(f.i)); }
+  if (!BV.lift) BV.res.forEach(r => resStep(r, dt));
+  BV.shake = Math.max(0, BV.shake - dt);
+  const sh = BV.shake > 0 ? cs * .18 * BV.shake : 0;
   g.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, G.W, G.H);
+  if (sh) g.translate(rnd(-sh, sh), rnd(-sh, sh));
+  const PL = PLOTS[S.plot] || PLOTS[0];
   // building area + dots on the cell corners
   g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(ox, oy, WW * cs, WH * cs);
   const d = Math.max(2, Math.round(cs * .07)); g.fillStyle = 'rgba(255,255,255,.6)';
   for (let y = 0; y <= WH; y++) for (let x = 0; x <= WW; x++) g.fillRect(ox + x * cs - d / 2, oy + y * cs - d / 2, d, d);
   // ground across the whole width
-  for (let k = Math.floor(-ox / cs) - 1; ox + k * cs < G.W; k++) { drawBlock(g, 'grass', ox + k * cs, gy, cs); drawBlock(g, 'dirt', ox + k * cs, gy + cs, cs); }
+  for (let k = Math.floor(-ox / cs) - 1; ox + k * cs < G.W; k++) { drawBlock(g, PL.top, ox + k * cs, gy, cs); drawBlock(g, PL.under, ox + k * cs, gy + cs, cs); }
   // blueprint hints on empty cells
   const b = curBP();
   if (b && !BV.lift) {
@@ -1371,10 +1573,10 @@ function bDraw() {
   const hp = clamp((now - BV.hop) / 320, 0, 1), hop = hp < 1 ? Math.sin(hp * Math.PI) * cs * .45 : 0;
   const hh = cs * 2.5, hw = hh * 16 / 24;
   g.drawImage(SPRC[heroKey()], Math.round(ox - HERO_W * cs + (HERO_W * cs - hw) / 2), Math.round(gy - hh - hop), Math.round(hw), Math.round(hh));
-  let busy = hp < 1;
+  let busy = hp < 1 || BV.res.length > 0 || BV.fuses.length > 0 || BV.shake > 0;
   // blocks
   BV.anims = BV.anims.filter(a => now - a.t0 < a.dur);
-  const am = new Map(BV.anims.map(a => [a.i, a])), w = S.world;
+  const am = new Map(BV.anims.map(a => [a.i, a])), w = S.world, fuse = new Set(BV.fuses.map(f => f.i));
   for (let i = 0; i < w.length; i++) {
     const ch = w[i]; if (ch === '.') continue;
     let px = ox + (i % WW) * cs, py = oy + Math.floor(i / WW) * cs, s = cs;
@@ -1382,15 +1584,47 @@ function bDraw() {
     const a = am.get(i);
     if (a) { const p = easeOut(clamp((now - a.t0) / a.dur, 0, 1)); s = cs * (1 + a.k * (1 - p)); px -= (s - cs) / 2; py -= (s - cs) / 2 + a.k * (1 - p) * cs; busy = true; }
     drawBlock(g, BCH[ch], px, py, s);
+    if (S.night && ch === 'w') { g.fillStyle = 'rgba(255,214,110,.55)'; g.fillRect(px + 2, py + 2, s - 4, s - 4); }
+    if (fuse.has(i) && Math.floor(now / 110) % 2) { g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(px, py, s, s); g.fillStyle = '#ffc62e'; g.fillRect(px + s * .4, py - s * .2, s * .2, s * .2); }
   }
-  // finger position
+  // семья
+  for (const r of BV.res) {
+    const q = resRect(r); if (!q) continue;
+    const f = famById(r.id);
+    if (r.dir < 0 && f.h === 1) { g.save(); g.translate(q.x + q.w, q.y); g.scale(-1, 1); g.drawImage(q.c, 0, 0, q.w, q.h); g.restore(); }
+    else g.drawImage(q.c, q.x, q.y, q.w, q.h);
+  }
+  // рамка
   const P = BV.press;
-  if (P && P.cur) { g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.strokeRect(ox + P.cur.x * cs + 1.5, oy + P.cur.y * cs + 1.5, cs - 3, cs - 3); }
+  if (P && P.mode === 'rect' && P.a && P.b) {
+    const x0 = Math.min(P.a.x, P.b.x), x1 = Math.max(P.a.x, P.b.x), y0 = Math.min(P.a.y, P.b.y), y1 = Math.max(P.a.y, P.b.y);
+    g.globalAlpha = .45;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (cellCh(y * WW + x) === '.') drawBlock(g, S.lastBlock, ox + x * cs, oy + y * cs, cs, true);
+    g.globalAlpha = 1; g.setLineDash([6, 5]); g.strokeStyle = '#ffffff'; g.lineWidth = 3;
+    g.strokeRect(ox + x0 * cs + 1.5, oy + y0 * cs + 1.5, (x1 - x0 + 1) * cs - 3, (y1 - y0 + 1) * cs - 3); g.setLineDash([]);
+  } else if (P && P.cur) { g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.strokeRect(ox + P.cur.x * cs + 1.5, oy + P.cur.y * cs + 1.5, cs - 3, cs - 3); }
   // very first time: blink where to tap
-  if (!BV.lift && !usedBlocks() && wallet() > 0 && !b) {
+  if (!BV.lift && !usedBlocks() && wallet() > 0 && !b && BLOCKS.some(x => x.t === S.btool)) {
     const p = (Math.sin(now / 170) + 1) / 2, hx = ox + (WW >> 1) * cs, hy = oy + (WH - 1) * cs;
-    if (S.btool !== 'pick') { g.globalAlpha = .25 + .4 * p; drawBlock(g, S.btool, hx, hy, cs, true); g.globalAlpha = 1; }
+    g.globalAlpha = .25 + .4 * p; drawBlock(g, S.btool, hx, hy, cs, true); g.globalAlpha = 1;
     g.strokeStyle = `rgba(255,198,46,${.5 + .5 * p})`; g.lineWidth = 3 + 3 * p; g.strokeRect(hx + 3, hy + 3, cs - 6, cs - 6); busy = true;
+  }
+  // ночь: темнота, свет фонарей и окон
+  if (S.night) {
+    if (!BV.lc) BV.lc = document.createElement('canvas');
+    const lc = BV.lc; if (lc.width !== cv.width || lc.height !== cv.height) { lc.width = cv.width; lc.height = cv.height; }
+    const lg = lc.getContext('2d'); lg.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+    lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, G.W, G.H); lg.fillStyle = 'rgba(8,10,38,.6)'; lg.fillRect(0, 0, G.W, G.H);
+    const lights = [];
+    for (let i = 0; i < w.length; i++) { const ch = w[i]; if (ch === 'h') lights.push([i, 3.4, '255,220,120']); else if (ch === 'w') lights.push([i, 1.4, '255,214,110']); else if (ch === 'i' || ch === 'y') lights.push([i, 1, '120,255,240']); }
+    BV.fuses.forEach(f => lights.push([f.i, 1.8, '255,160,60']));
+    lg.globalCompositeOperation = 'destination-out';
+    const at = i => [ox + (i % WW + .5) * cs, oy + (Math.floor(i / WW) + .4) * cs];
+    for (const [i, rad] of lights) { const [lx, ly] = at(i), R = rad * cs, gr = lg.createRadialGradient(lx, ly, 0, lx, ly, R); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); lg.fillStyle = gr; lg.fillRect(lx - R, ly - R, 2 * R, 2 * R); }
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(lc, 0, 0); g.restore();
+    g.globalCompositeOperation = 'lighter';
+    for (const [i, rad, col] of lights) { const [lx, ly] = at(i), R = rad * cs * .8, gr = g.createRadialGradient(lx, ly, 0, lx, ly, R); gr.addColorStop(0, `rgba(${col},.32)`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(lx - R, ly - R, 2 * R, 2 * R); }
+    g.globalCompositeOperation = 'source-over';
   }
   if (busy) bReq();
 }
@@ -1416,12 +1650,13 @@ function bPlace(i, t) {
   Sfx.place();
   const [x, y] = cellPt(i); FX.spawn(x, y + BV.g.cs * .45, TEX[t].cols, 6, { speed: .3, size: .55 });
   if (cur === '.') bumpGems();
+  BV.res.forEach(r => { if (!roomAt(Math.floor(r.x), r.y, famById(r.id).h)) resLand(r); });
   bCheck(true); bReq(); return true;
 }
 function bRemove(i) {
   const cur = cellCh(i); if (cur === '.') return false;
   setCell(i, '.'); bSave(); Sfx.crack();
-  const [x, y] = cellPt(i); FX.spawn(x, y, TEX[BCH[cur]].cols.concat(['#ffffff']), 14, { speed: .55 });
+  const [x, y] = cellPt(i); FX.spawn(x, y, (TEX[BCH[cur]].cols || []).concat(['#ffffff']), 14, { speed: .55 });
   FX.flyGem([x, y], 1);
   bCheck(false); bReq(); return true;
 }
@@ -1435,10 +1670,15 @@ function bApply(i, mode) {
 function bDown(e) {
   if (BV.busy || CUR !== 'build' || (e.button !== undefined && e.button > 0)) return;
   if (!BV.g) bLayout();
+  const tool = String(S.btool);
+  if (tool.startsWith('fam:') || tool === 'pick') { const hitR = resHit(e); if (hitR) { e.preventDefault(); resTap(hitR); return; } }   // со строительным блоком в руке стройка важнее
   const c = bCell(e); if (!c) return;
   e.preventDefault();
   try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
-  const cur = cellCh(c.i), tool = S.btool;
+  const cur = cellCh(c.i);
+  if (tool.startsWith('fam:')) { resPut(tool.slice(4), c); return; }
+  if (tool === 'fill') { BV.press = { id: e.pointerId, mode: 'rect', a: c, b: c, cur: c }; bReq(); return; }
+  if (cur === 't' && tool !== 'pick') { bIgnite(c.i); return; }
   const mode = tool === 'pick' ? 'remove' : (cur === '.' || BCH[cur] === tool) ? 'place' : 'paint';
   BV.press = { id: e.pointerId, mode, last: c, cur: c };
   if (!bApply(c.i, mode) && mode !== 'remove' && cur !== '.') { BV.anims.push({ i: c.i, t0: performance.now(), dur: 160, k: .12 }); Sfx.tap(); }
@@ -1446,32 +1686,29 @@ function bDown(e) {
 }
 function bMove(e) {
   const P = BV.press; if (!P || P.id !== e.pointerId || BV.busy) return;
-  const c = bCell(e); if (!c) { if (P.cur) { P.cur = null; bReq(); } return; }
+  const c = bCell(e);
+  if (P.mode === 'rect') { if (c) { P.b = c; P.cur = c; } bReq(); return; }
+  if (!c) { if (P.cur) { P.cur = null; bReq(); } return; }
   if (P.cur && c.i === P.cur.i) return;
   // walk every cell between the last one and this one, so a fast finger leaves no gaps
   let x = P.last.x, y = P.last.y; const dx = Math.abs(c.x - x), dy = Math.abs(c.y - y), sx = c.x > x ? 1 : -1, sy = c.y > y ? 1 : -1; let err = dx - dy;
   while (x !== c.x || y !== c.y) { const e2 = 2 * err; if (e2 > -dy) { err -= dy; x += sx; } if (e2 < dx) { err += dx; y += sy; } bApply(y * WW + x, P.mode); }
   P.last = c; P.cur = c; bReq();
 }
-function bUp(e) { const P = BV.press; if (!P || P.id !== e.pointerId) return; BV.press = null; clearTimeout(BV.saveT); save(); bReq(); }
+function bUp(e) {
+  const P = BV.press; if (!P || P.id !== e.pointerId) return; BV.press = null;
+  if (P.mode === 'rect' && P.a && P.b) bFillRect(P.a, P.b);
+  clearTimeout(BV.saveT); save(); bReq();
+}
 function bHeader() {
   const b = curBP(), nm2 = $('#build-name'), bw = $('#build-barw'), cnt = $('#build-count');
-  if (!b) { nm2.textContent = 'СТРОЙКА'; bw.hidden = cnt.hidden = true; return; }
+  if (!b) { nm2.textContent = (PLOTS[S.plot] || PLOTS[0]).name.toUpperCase(); bw.hidden = cnt.hidden = true; return; }
   const [d, n] = bpProgress(b);
   nm2.textContent = b.name.toUpperCase(); bw.hidden = cnt.hidden = false;
   $('#build-bar').style.width = (d / n * 100).toFixed(1) + '%'; cnt.textContent = `${d}/${n}`;
 }
-function bDogs() {
-  const box = $('#bdogs'), G = BV.g; if (!box || !G) return;
-  box.style.setProperty('--dh', Math.round(G.cs * 1.45) + 'px');
-  if (!box.childElementCount) box.innerHTML = ['vinni', 'elli'].map((id, i) => `<button class="bdog trot t${i}" data-pet="${id}" aria-label="${PETS[id].name}"><img class="spr" src="${SPRU[PETS[id].spr]}" alt=""></button>`).join('') +
-    `<button class="bdog gerda" data-pet="gerda" aria-label="Герда" hidden><img class="spr" src="${SPRU.dog_gerda}" alt=""></button>`;
-  const k = BP.find(b => b.kennel), gd = $('.bdog.gerda', box), ok = !!k && bpProgress(k)[0] === k.n;
-  gd.hidden = !ok;
-  if (ok) { const h = G.cs * 1.6, w = h * 24 / 17; gd.style.left = Math.round(G.ox + (k.ox + k.w / 2) * G.cs - w / 2) + 'px'; }
-}
 function bCheck(added) {
-  bHeader(); bDogs();
+  bHeader();
   const b = curBP(); if (!b) return;
   const [d, n] = bpProgress(b);
   if (d < n) { BV.done = false; return; }
@@ -1484,6 +1721,8 @@ async function bCelebrate(i) {
   const cx = r.left + G.ox + (b.ox + b.w / 2) * G.cs, cy = r.top + G.oy + (b.oy + b.h / 2) * G.cs;
   if (first) { S.bpDone = [...(S.bpDone || []), i]; S.gems += BONUS; save(); }
   Sfx.fanfare(); FX.confetti(); FX.burst(cx, Math.max(r.top + 70, r.top + G.oy + b.oy * G.cs), 'ПОСТРОЕНО!', { fs: 46 });
+  BV.res.forEach(q => { q.hopT = .5; q.wait = 1; });
+  if (b.kennel && !BV.res.some(q => q.id === 'gerda')) resPut('gerda', { x: Math.max(0, b.ox - 1), y: WH - 1 });
   await say(b.done); if (!token.alive) return;
   if (b.rocket) { await rocketFly(b, token); if (!token.alive) return; }
   if (first) { FX.flyGem([cx, cy], 5); await say(T.bonus); }
@@ -1507,18 +1746,27 @@ async function rocketFly(b, token) {
     await say(T.rocketBack);
   } finally { BV.lift = 0; BV.busy = false; bReq(); }
 }
+const CATS = [
+  { name: 'Стены', tex: 'brick' }, { name: 'Цвета', tex: 'red' }, { name: 'Природа', tex: 'leaves' }, { name: 'Особые', tex: 'tnt' }, { name: 'Семья', fam: true },
+];
 function bHotbar() {
-  const hb = $('#hotbar');
-  if (!hb.childElementCount) {
-    hb.innerHTML = `<button class="hb pick" data-t="pick" aria-label="Кирка">${sprImg('i_pick')}</button>` +
-      BLOCKS.map(b => `<button class="hb" data-t="${b.t}" aria-label="${b.name}" style="background-image:url(${TEX[b.t].url})"></button>`).join('');
-  }
+  const hb = $('#hotbar'), tab = clamp(S.btab || 0, 0, CATS.length - 1);
+  const tools = `<div class="hb-tools"><button class="hb pick" data-t="pick" aria-label="Кирка">${sprImg('i_pick')}</button><button class="hb fill" data-t="fill" aria-label="Рамка"><i style="background-image:url(${TEX[S.lastBlock].url})"></i>${sprImg('i_fill')}</button></div>`;
+  const tabs = `<div class="hb-tabs">${CATS.map((c, k) => `<button class="hb-tab${k === tab ? ' on' : ''}" data-tab="${k}" aria-label="${c.name}">${c.fam ? `<img class="spr" src="${SPRU.i_family}" alt="">` : `<i style="background-image:url(${TEX[c.tex].url})"></i>`}</button>`).join('')}</div>`;
+  const items = CATS[tab].fam
+    ? FAMILY.map(f => `<button class="hb fam${BV.res.some(r => r.id === f.id) ? ' placed' : ''}" data-t="fam:${f.id}" aria-label="${f.name}"><img class="spr" src="${SPRU[famSpr(f)]}" alt=""></button>`).join('')
+    : BLOCKS.filter(b => b.cat === tab).map(b => `<button class="hb${DECOR.has(b.t) ? ' deco' : ''}" data-t="${b.t}" aria-label="${b.name}" style="background-image:url(${TEX[b.t].url})"></button>`).join('');
+  hb.innerHTML = tools + tabs + `<div class="hb-items">${items}</div>`;
   $$('.hb', hb).forEach(b => b.classList.toggle('sel', b.dataset.t === S.btool));
 }
+function bTab(k) { S.btab = k; save(); bHotbar(); Sfx.tap(); }
 function bTool(t) {
   if (BV.busy) return;
-  S.btool = t; save(); bHotbar(); Sfx.tap();
+  S.btool = t; if (BLOCKS.some(b => b.t === t)) S.lastBlock = t; save(); bHotbar(); Sfx.tap();
   if (t === 'pick') { say(BV.pickTold ? T.pickShort : T.pick); BV.pickTold = true; return; }
+  if (t === 'fill') { say(BV.fillTold ? T.fillShort : T.fillTool); BV.fillTold = true; return; }
+  if (t.startsWith('fam:')) { const f = famById(t.slice(4)); if (f) say(BV.res.some(r => r.id === f.id) ? f.line() : [f.line(), T.famPut]); return; }
+  if (t === 'tnt') { say(T.tntHow); return; }
   const b = BLOCKS.find(x => x.t === t); if (b) say(P.block(b));
 }
 const THUMB = {};
@@ -1528,6 +1776,16 @@ function bpThumb(rows, key) {
   c.width = w * s; c.height = h * s; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const ch = r[x]; if (ch !== '.' && BCH[ch]) drawBlock(g, BCH[ch], x * s, y * s, s); } });
   return (THUMB[key] = c.toDataURL());
+}
+const PLOT_SKY = ['#8fd8ff', '#d6eeff', '#7fd3ff', '#15123a'];
+function plotThumb(k) {
+  const s = 6, c = document.createElement('canvas'); c.width = WW * s; c.height = (WH + 2) * s; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = PLOT_SKY[k]; g.fillRect(0, 0, c.width, c.height);
+  if (k === 3) { g.fillStyle = '#ffffff'; for (let i = 0; i < 18; i++) g.fillRect((i * 37) % c.width, (i * 23) % (WH * s), 1, 1); }
+  const w = k === S.plot ? S.world : S.worlds[k];
+  for (let i = 0; i < w.length; i++) if (w[i] !== '.') drawBlock(g, BCH[w[i]], (i % WW) * s, Math.floor(i / WW) * s, s, true);
+  for (let x = 0; x < WW; x++) { g.drawImage(TEX[PLOTS[k].top].cv, x * s, WH * s, s, s); g.drawImage(TEX[PLOTS[k].under].cv, x * s, (WH + 1) * s, s, s); }
+  return c.toDataURL();
 }
 const FREE_ROWS = ['.fff.', 'fffff', 'fffff', '.fff.', '..l..', '..l..'];
 function openPlans() {
@@ -1539,6 +1797,27 @@ function openPlans() {
   });
   say(T.planPick);
 }
+function openPlots() {
+  if (BV.busy) return;
+  modal(`<h3>Где строим?</h3><div class="plans plots">${PLOTS.map((p, k) => `<button class="plan-card${S.plot === k ? ' sel' : ''}" data-act="plot" data-i="${k}" aria-label="${p.name}"><span class="th"><img src="${plotThumb(k)}" alt=""></span><span class="pc-name">${p.name}</span></button>`).join('')}</div>`, el => {
+    if (el.dataset.act !== 'plot') return;
+    closeModal(); bSetPlot(+el.dataset.i);
+  });
+  say(T.plotPick);
+}
+function bStageClass() {
+  const st = $('#build-stage'); st.className = `build-stage ${(PLOTS[S.plot] || PLOTS[0]).cls}${S.night ? ' night' : ''}`;
+  const nb = $('#btn-night img'); if (nb) nb.src = SPRU[S.night ? 'i_sun' : 'i_moon'];
+}
+function bSetPlot(k) {
+  resSave();
+  S.worlds[S.plot] = S.world; S.plot = k; S.world = S.worlds[k]; save();
+  BV.res = resLoad(); BV.fuses = []; BV.anims = [];
+  const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
+  bStageClass(); bHeader(); bHotbar(); bReq(); Sfx.whoosh();
+  say(PLOTS[k].say);
+}
+function bNight() { if (BV.busy) return; S.night = !S.night; save(); bStageClass(); bReq(); Sfx.ding(); say(S.night ? T.nightOn : T.nightOff); }
 function bSetPlan(i) {
   S.bp = i; save();
   const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
@@ -1547,17 +1826,24 @@ function bSetPlan(i) {
 }
 async function openBuild() {
   endRun(); closeModal();
-  BV.token = { alive: true }; BV.press = null; BV.busy = false; BV.lift = 0; BV.anims = [];
-  show('build'); bHotbar(); bHeader();
+  BV.token = { alive: true }; BV.press = null; BV.busy = false; BV.lift = 0; BV.anims = []; BV.fuses = [];
+  BV.res = resLoad();
+  show('build'); bStageClass(); bHotbar(); bHeader();
   await nextFrame();
-  bLayout(); bDogs();
+  bLayout();
   const b = curBP(); BV.done = !!b && bpProgress(b)[0] === b.n;
+  if (!S.resSeen) {   // впервые после обновления: собаки уже гуляют, семья ждёт во вкладке
+    S.resSeen = 1;
+    ['vinni', 'elli'].forEach((id, k) => { if (!BV.res.some(r => r.id === id)) { const r = { id, x: 4.5 + k * 6, y: WH - 1, dir: k ? -1 : 1, dy: 0, t: 0, wait: .5, hopT: 0 }; BV.res.push(r); resLand(r); } });
+    resSave();
+  }
   bReq();
   if (!S.buildSeen) { S.buildSeen = 1; save(); say(wallet() > 0 ? [T.build, T.buildCost] : [T.build, T.buildEmpty]); }
+  else if (!S.famSeen) { S.famSeen = 1; save(); say(T.famHello); }
   else if (wallet() <= 0 && !usedBlocks()) say(T.buildEmpty);
   else say(T.buildHi);
 }
-function buildStop() { BV.token.alive = false; BV.press = null; BV.lift = 0; BV.busy = false; }
+function buildStop() { if (BV.token.alive && CUR === 'build') resSave(); BV.token.alive = false; BV.press = null; BV.lift = 0; BV.busy = false; BV.fuses = []; }
 
 /* ---------- собаки Винни, Элли, Герда и малыш Даниил ---------- */
 const PETS = {
@@ -2112,7 +2398,7 @@ function renderParent() {
   <section>
     <h3>Как это работает</h3>
     <p>Миссия — это несколько коротких заданий: найти букву на слух, найти такую же, угадать первую букву слова по картинке, обвести букву пальцем по дорожке и финальный «тир». Новая буква открывается, когда прошлые уже узнаются. За правильные ответы — алмазы.</p>
-    <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Есть чертежи (домик, башня, замок, ракета) — за первую постройку по чертежу +10 алмазов. Алмазы также открывают новых героев.</p>
+    <p>На «Стройке» ребёнок сам строит из блоков: один алмаз — один блок, кирка убирает блок и возвращает алмаз. Четыре участка (луг, зима, пляж, Луна), блоки разложены по вкладкам, есть рамка (заполнить прямоугольник), динамит (нажать на него — взрывается, алмазы возвращаются), день и ночь. На стройке живёт семья: папа, мама, Максим, Даниил и собаки — их ставят из вкладки «Семья», они ходят по постройкам и заходят в двери. Чертежи (11 штук) — за первую постройку по каждому +10 алмазов. Алмазы также открывают новых героев.</p>
     <p>Ошибки не наказываются: игра называет букву, на которую нажал ребёнок, а после второй ошибки подсвечивает нужную.</p>
     <p>«Танчики»: подбивать можно только танки с нужной буквой (по другим снаряд отскакивает, а игра называет букву) и защищать сундук. Собаки и малыш Даниил — бонусы: Винни пугает танки, Элли даёт жизнь, Герда охраняет сундук, Даниил даёт щит. После победы уровень растёт (1–10).</p>
     <p>«Найди букву» и финальный бой усложняются сами: после трёх быстрых ответов подряд растёт уровень (больше блоков, похожие буквы, «найди все»), в бою — быстрее дроны и промах отнимает секунды. Если не получается — уровень снижается. Сейчас: найди букву — ${S.fl} из 8, бой — ${S.al} из 10.</p>
@@ -2167,7 +2453,7 @@ function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) Voice.stop(); });
   window.addEventListener('resize', () => {
     FX.resize(); fitLogo(); if (curFit) curFit(); if (TR) TR.layout();
-    if (CUR === 'build') { bLayout(); bReq(); bDogs(); }
+    if (CUR === 'build') { bLayout(); bReq(); }
     if (CUR === 'tanks') tkLayout();
   });
 
@@ -2204,15 +2490,16 @@ function boot() {
   $('#hero-grid').addEventListener('click', e => { const c = e.target.closest('.hcard'); if (c) tapHero(c.dataset.h, c); });
   $('#build-play').addEventListener('click', () => { Sfx.tap(); startMission(); });
   $('#btn-plan').addEventListener('click', () => { Sfx.tap(); openPlans(); });
-  $('#hotbar').addEventListener('click', e => { const b = e.target.closest('.hb'); if (b) bTool(b.dataset.t); });
+  $('#hotbar').addEventListener('click', e => { const tb = e.target.closest('.hb-tab'); if (tb) { bTab(+tb.dataset.tab); return; } const b = e.target.closest('.hb'); if (b) bTool(b.dataset.t); });
+  $('#btn-plot').addEventListener('click', () => { Sfx.tap(); openPlots(); });
+  $('#btn-night').addEventListener('click', () => { Sfx.tap(); bNight(); });
   const bcv = $('#build-cv');
   bcv.addEventListener('pointerdown', bDown); bcv.addEventListener('pointermove', bMove);
   bcv.addEventListener('pointerup', bUp); bcv.addEventListener('pointercancel', bUp); bcv.addEventListener('lostpointercapture', bUp);
-  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'build') { bLayout(); bReq(); bDogs(); } }).observe($('#build-stage'));
+  if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'build') { bLayout(); bReq(); } }).observe($('#build-stage'));
   if (window.ResizeObserver) new ResizeObserver(() => { if (CUR === 'tanks') tkLayout(); }).observe($('#tk-arena'));
   tkBind();
   $('#pets').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
-  $('#bdogs').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
   $('#scr-reward').addEventListener('click', e => { const b = e.target.closest('[data-pet]'); if (b) petTap(b.dataset.pet, b); });
   onVoices = () => { if (CUR === 'parent' && S.sysVoice && !$('#p-voice') && TTS.ruVoices().length) renderParent(); };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLogo).catch(() => {});

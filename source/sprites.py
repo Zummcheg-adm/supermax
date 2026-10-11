@@ -609,6 +609,10 @@ from sprites_pets import PAL_ADD as _PA, SPR as _SP  # собаки, малыш,
 assert not (set(_PA) & set(PAL)), set(_PA) & set(PAL)
 PAL.update(_PA)
 SPR.update(_SP)
+from sprites_more import PAL_ADD as _PM, SPR as _SM  # новые герои, папа и мама, значки
+assert not (set(_PM) & set(PAL)), set(_PM) & set(PAL)
+PAL.update(_PM)
+SPR.update(_SM)
 
 
 def render(name, scale=12):

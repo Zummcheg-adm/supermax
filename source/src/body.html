@@ -75,11 +75,13 @@
     <div class="hud">
       <button class="pbtn sm" data-home aria-label="Домой"><img class="spr" data-spr="i_home" alt=""></button>
       <div class="build-title"><span class="scr-title" id="build-name">СТРОЙКА</span><div class="bar" id="build-barw" hidden><i id="build-bar"></i></div><span class="build-count" id="build-count" hidden>0/0</span></div>
+      <button class="pbtn sm" id="btn-plot" aria-label="Где строим" style="--c:var(--grass)"><img class="spr" data-spr="i_globe" alt=""></button>
+      <button class="pbtn sm" id="btn-night" aria-label="День и ночь" style="--c:var(--ink)"><img class="spr" data-spr="i_moon" alt=""></button>
       <button class="pbtn sm" id="btn-plan" aria-label="Что строим" style="--c:var(--sun)"><img class="spr" data-spr="i_plan" alt=""></button>
       <button class="pbtn sm pulse" id="build-play" aria-label="Играть" style="--c:var(--hero)" hidden><img class="spr" data-spr="i_play" alt=""></button>
       <div class="gemcount"><img class="spr" data-spr="gem" alt=""><b>0</b></div>
     </div>
-    <div class="build-stage" id="build-stage"><canvas id="build-cv"></canvas><div class="bdogs" id="bdogs"></div></div>
+    <div class="build-stage" id="build-stage"><canvas id="build-cv"></canvas></div>
     <div class="hotbar" id="hotbar"></div>
   </section>
 

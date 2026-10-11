@@ -294,12 +294,30 @@ img{max-width:100%}
 .build-count{font:12px/1 var(--f-pixel);color:var(--ink);background:var(--white);padding:6px 8px;border:3px solid var(--ink);border-radius:4px}
 .build-stage{flex:1;min-height:0;position:relative}
 #build-cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}
-.hotbar{--hb:clamp(44px,calc((100vw - 210px) / 17),64px);align-self:center;max-width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px;background:rgba(27,21,48,.5);border:var(--line) solid var(--ink);border-radius:10px;box-shadow:5px 5px 0 rgba(27,21,48,.35)}
+.hotbar{--hb:clamp(42px,calc((100vw - 330px) / 14),60px);align-self:center;max-width:100%;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:8px;background:rgba(27,21,48,.5);border:var(--line) solid var(--ink);border-radius:10px;box-shadow:5px 5px 0 rgba(27,21,48,.35)}
+.hb-tools,.hb-tabs,.hb-items{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.hb-tabs{background:rgba(255,255,255,.18);border-radius:8px;padding:4px;gap:4px}
+.hb-tab{appearance:none;width:calc(var(--hb) * .78);height:calc(var(--hb) * .78);border:3px solid var(--ink);border-radius:50%;background:var(--paper);padding:0;display:grid;place-items:center;cursor:pointer;overflow:hidden}
+.hb-tab i{width:100%;height:100%;background:center/100% 100% no-repeat;image-rendering:pixelated}
+.hb-tab img{width:76%}
+.hb-tab.on{outline:4px solid var(--sun);outline-offset:1px;transform:scale(1.12)}
 .hb{appearance:none;position:relative;flex:none;width:var(--hb);height:var(--hb);padding:0;border:3px solid var(--ink);border-radius:6px;cursor:pointer;background:#8e8e98 center/100% 100% no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:inset -4px -4px 0 rgba(0,0,0,.25),inset 4px 4px 0 rgba(255,255,255,.3);transition:transform .1s ease}
-.hb.pick{background:var(--paper);display:grid;place-items:center;margin-right:8px}
+.hb.deco{background-color:#cfe9ff;box-shadow:none}
+.hb.pick{background:var(--paper);display:grid;place-items:center}
 .hb.pick img{width:74%}
+.hb.fill{background:var(--paper);display:grid;place-items:center}
+.hb.fill i{position:absolute;inset:26% 30% 30% 22%;background:center/100% 100% no-repeat;image-rendering:pixelated}
+.hb.fill img{position:relative;width:78%}
+.hb.fam{background:var(--paper);display:grid;place-items:end center}
+.hb.fam img{height:88%;width:auto}
+.hb.fam.placed::after{content:"";position:absolute;right:-6px;top:-6px;width:16px;height:16px;border-radius:50%;background:var(--good);border:3px solid var(--ink)}
 .hb.sel{transform:translateY(-5px) scale(1.1);outline:4px solid var(--sun);outline-offset:2px;z-index:1}
 .hb:active{scale:.94}
+.build-stage.plot-winter{background:radial-gradient(#fff 2px,transparent 2.6px) 0 0/46px 46px,radial-gradient(#ffffffcc 1.5px,transparent 2px) 20px 12px/32px 32px,linear-gradient(#e8f5ff,#c6e4ff);animation:snow 9s linear infinite;border-radius:8px}
+@keyframes snow{to{background-position:20px 460px,40px 332px,0 0}}
+.build-stage.plot-beach{background:radial-gradient(circle at 88% 14%,#fff6b0 0 34px,#ffd84a 35px 46px,transparent 47px),linear-gradient(#6fcdff,#bdeeff);border-radius:8px}
+.build-stage.plot-moon{background:radial-gradient(circle at 86% 16%,#6fc0ff 0 30px,#2f6fe0 31px 34px,transparent 35px),radial-gradient(#fff 1px,transparent 1.6px) 0 0/50px 50px,radial-gradient(#ffffffaa 1px,transparent 1.6px) 25px 18px/70px 70px,linear-gradient(#0b0a24,#221d52);border-radius:8px}
+.build-stage.night{background:radial-gradient(circle at 86% 16%,#fffbe0 0 26px,transparent 27px),radial-gradient(#fff 1px,transparent 1.6px) 0 0/50px 50px,radial-gradient(#ffffffaa 1px,transparent 1.6px) 25px 18px/70px 70px,linear-gradient(#0b0a24,#25205a);border-radius:8px}
 .gemcount.shake{animation:shake .4s ease}
 .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:14px;width:min(680px,84vw)}
 .plan-card{appearance:none;position:relative;cursor:pointer;background:var(--white);border:var(--line) solid var(--ink);border-radius:8px;box-shadow:5px 5px 0 var(--ink);padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;min-height:150px;color:var(--ink)}
